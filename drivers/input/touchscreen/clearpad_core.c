@@ -25,6 +25,7 @@
 #include <linux/ctype.h>
 #include <linux/firmware.h>
 #include <linux/slab.h>
+#include <linux/mfd/pm8xxx/vibrator.h>
 #ifdef CONFIG_DEBUG_FS
 #include <linux/debugfs.h>
 #endif
@@ -128,6 +129,11 @@ do {					\
 	LOG_CHECK(this, "UNLOCK\n");	\
 	mutex_unlock(&this->lock);	\
 } while (0)
+
+#define WG_VIB_ENABLE		0
+#define WG_VIB_STRENGTH		30
+#define WG_VIB_STRENGTH_MIN	18
+#define WG_VIB_STRENGTH_MAX	100
 
 enum synaptics_state {
 	SYN_STATE_INIT,
@@ -420,6 +426,8 @@ struct synaptics_clearpad {
 
 static void synaptics_funcarea_initialize(struct synaptics_clearpad *this);
 static void synaptics_clearpad_reset_power(struct synaptics_clearpad *this);
+
+static unsigned int wg_vib_enable = WG_VIB_ENABLE, wg_vib_strength = WG_VIB_STRENGTH;
 
 static char *make_string(u8 *array, size_t size)
 {
@@ -1828,6 +1836,8 @@ static int synaptics_clearpad_handle_gesture(struct synaptics_clearpad *this)
 	case XY_LPWG_STATUS_DOUBLE_TAP_DETECTED:
 		rc = evgen_execute(this->input, this->evgen_blocks,
 					"double_tap");
+		if (wg_vib_enable)
+			vibrate(wg_vib_strength);
 		break;
 	case XY_LPWG_STATUS_SWIPE_DETECTED:
 		rc = evgen_execute(this->input, this->evgen_blocks,
@@ -1836,6 +1846,8 @@ static int synaptics_clearpad_handle_gesture(struct synaptics_clearpad *this)
 	case XY_LPWG_STATUS_TWO_SWIPE_DETECTED:
 		rc = evgen_execute(this->input, this->evgen_blocks,
 					"two_swipe");
+		if (wg_vib_enable)
+			vibrate(wg_vib_strength);
 		break;
 	default:
 		rc = -EINVAL;
@@ -2339,6 +2351,24 @@ static ssize_t synaptics_clearpad_state_show(struct device *dev,
 	return strnlen(buf, PAGE_SIZE);
 }
 
+static ssize_t wg_vib_enable_show(struct device *dev,
+					struct device_attribute *attr,
+					char *buf)
+{
+	snprintf(buf, PAGE_SIZE, "%u", wg_vib_enable);
+
+	return strnlen(buf, PAGE_SIZE);
+}
+
+static ssize_t wg_vib_strength_show(struct device *dev,
+				struct device_attribute *attr,
+				char *buf)
+{
+	snprintf(buf, PAGE_SIZE, "%u", wg_vib_strength);
+
+	return strnlen(buf, PAGE_SIZE);
+}
+
 static ssize_t synaptics_clearpad_fwflush_store(struct device *dev,
 					       struct device_attribute *attr,
 					       const char *buf, size_t size)
@@ -2480,6 +2510,38 @@ static ssize_t synaptics_clearpad_wakeup_gesture_store(struct device *dev,
 	return strnlen(buf, PAGE_SIZE);
 }
 
+static ssize_t wg_vib_enable_store(struct device *dev,
+					struct device_attribute *attr,
+					const char *buf, size_t size)
+{
+	if (sysfs_streq(buf, "1"))
+		wg_vib_enable = 1;
+	else if (sysfs_streq(buf, "0"))
+		wg_vib_enable = 0;
+	else
+	/* Disable Wake Gesture Vibration if the Value is out of Range */
+		wg_vib_enable = 0;
+
+	return strnlen(buf, PAGE_SIZE);
+}
+
+static ssize_t wg_vib_strength_store(struct device *dev,
+				struct device_attribute *attr,
+				const char *buf, size_t size)
+{
+	int ret;
+	unsigned int val;
+
+	ret = sscanf(buf, "%u", &val);
+
+	if (ret != 1 || val < WG_VIB_STRENGTH_MIN || val > WG_VIB_STRENGTH_MAX)
+		return -EINVAL;
+
+	wg_vib_strength = val;
+
+	return strnlen(buf, PAGE_SIZE);
+}
+
 static struct device_attribute clearpad_sysfs_attrs[] = {
 	__ATTR(fwinfo, S_IRUGO, synaptics_clearpad_state_show, 0),
 	__ATTR(fwfamily, S_IRUGO, synaptics_clearpad_state_show, 0),
@@ -2489,6 +2551,10 @@ static struct device_attribute clearpad_sysfs_attrs[] = {
 	__ATTR(fwflush, S_IWUSR, 0, synaptics_clearpad_fwflush_store),
 	__ATTR(touchcmd, S_IWUSR, 0, synaptics_clearpad_touchcmd_store),
 	__ATTR(enabled, S_IWUSR, 0, synaptics_clearpad_enabled_store),
+	__ATTR(wg_vib_enable, S_IRUGO | S_IWUSR, wg_vib_enable_show,
+						wg_vib_enable_store),
+	__ATTR(wg_vib_strength, S_IRUGO | S_IWUSR, wg_vib_strength_show,
+						wg_vib_strength_store),
 };
 
 static struct device_attribute clearpad_wakeup_gesture_attr =
