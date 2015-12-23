@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2013, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2015 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -18,25 +18,11 @@
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
  */
+
 /*
- * Copyright (c) 2012, The Linux Foundation. All rights reserved.
- *
- * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
- *
- *
- * Permission to use, copy, modify, and/or distribute this software for
- * any purpose with or without fee is hereby granted, provided that the
- * above copyright notice and this permission notice appear in all
- * copies.
- *
- * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
- * WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
- * WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
- * AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL
- * DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
- * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
- * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
- * PERFORMANCE OF THIS SOFTWARE.
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
  */
 
 /******************************************************************************
@@ -56,11 +42,17 @@
 #include <net/sock.h>
 #include <wlan_nlink_srv.h>
 #include <vos_trace.h>
+#include "vos_memory.h"
 
 //Global variables
 static DEFINE_MUTEX(nl_srv_sem);
 static struct sock *nl_srv_sock;
 static nl_srv_msg_callback nl_srv_msg_handler[NLINK_MAX_CALLBACKS];
+
+#ifdef WLAN_KD_READY_NOTIFIER
+const char driverLoaded[]   = "KNLREADY";
+const char driverUnLoaded[] = "KNLCLOSE";
+#endif /* WLAN_KD_READY_NOTIFIER */
 
 //Forward declaration
 static void nl_srv_rcv (struct sk_buff *sk);
@@ -106,9 +98,20 @@ int nl_srv_init(void)
  * Deinit the netlink service.
  * Netlink service is unusable after this.
  */
+#ifdef WLAN_KD_READY_NOTIFIER
+void nl_srv_exit(int dst_pid)
+#else
 void nl_srv_exit(void)
+#endif /* WLAN_KD_READY_NOTIFIER */
 {
+#ifdef WLAN_KD_READY_NOTIFIER
+   if (0 != dst_pid)
+   {
+      nl_srv_nl_close_indication(dst_pid);
+   }
+#endif /* WLAN_KD_READY_NOTIFIER */
    netlink_kernel_release(nl_srv_sock);
+   nl_srv_sock = NULL;
 }
 
 /*
@@ -159,7 +162,7 @@ int nl_srv_unregister(tWlanNlModTypes msg_type, nl_srv_msg_callback msg_handler)
  * Unicast the message to the process in user space identfied
  * by the dst-pid
  */
-int nl_srv_ucast(struct sk_buff *skb, int dst_pid)
+int nl_srv_ucast(struct sk_buff *skb, int dst_pid, int flag)
 {
    int err;
 
@@ -170,11 +173,11 @@ int nl_srv_ucast(struct sk_buff *skb, int dst_pid)
 #endif
    NETLINK_CB(skb).dst_group = 0; //not multicast
 
-   err = netlink_unicast(nl_srv_sock, skb, dst_pid, MSG_DONTWAIT);
+   err = netlink_unicast(nl_srv_sock, skb, dst_pid, flag);
 
    if (err < 0)
       VOS_TRACE( VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_WARN,
-      "NLINK: netlink_unicast to pid[%d] failed, ret[0x%X]", dst_pid, err);
+      "NLINK: netlink_unicast to pid[%d] failed, ret[%d]", dst_pid, err);
 
    return err;
 }
@@ -186,6 +189,10 @@ int nl_srv_ucast(struct sk_buff *skb, int dst_pid)
 int nl_srv_bcast(struct sk_buff *skb)
 {
    int err;
+   int flags = GFP_KERNEL;
+
+   if (in_interrupt() || irqs_disabled() || in_atomic())
+       flags = GFP_ATOMIC;
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(3,7,0))
    NETLINK_CB(skb).pid = 0; //sender's pid
@@ -194,7 +201,7 @@ int nl_srv_bcast(struct sk_buff *skb)
 #endif
    NETLINK_CB(skb).dst_group = WLAN_NLINK_MCAST_GRP_ID; //destination group
 
-   err = netlink_broadcast(nl_srv_sock, skb, 0, WLAN_NLINK_MCAST_GRP_ID, GFP_KERNEL);
+   err = netlink_broadcast(nl_srv_sock, skb, 0, WLAN_NLINK_MCAST_GRP_ID, flags);
 
    if (err < 0)
    {
@@ -232,8 +239,8 @@ static void nl_srv_rcv_skb (struct sk_buff *skb)
 
       if (nlh->nlmsg_len < sizeof(*nlh) || skb->len < nlh->nlmsg_len) {
          VOS_TRACE( VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_WARN, "NLINK: Invalid "
-            "Netlink message: skb[0x%X], len[%d], nlhdr[0x%X], nlmsg_len[%d]",
-            (u32)skb, skb->len, (u32)nlh, nlh->nlmsg_len);
+            "Netlink message: skb[%p], len[%d], nlhdr[%p], nlmsg_len[%d]",
+            skb, skb->len, nlh, nlh->nlmsg_len);
          return;
       }
 
@@ -279,9 +286,6 @@ static void nl_srv_rcv_msg (struct sk_buff *skb, struct nlmsghdr *nlh)
       return;
    }
 
-   VOS_TRACE( VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_INFO,
-      "NLINK: Received NL msg type [%d]", type);
-
    // turn type into dispatch table offset
    type -= WLAN_NL_MSG_BASE;
 
@@ -294,3 +298,109 @@ static void nl_srv_rcv_msg (struct sk_buff *skb, struct nlmsghdr *nlh)
    }
 }
 
+#ifdef WLAN_KD_READY_NOTIFIER
+/*
+ * Send Net Link interface ready indication to application daemon
+ * Each netlink message will have a message of type tAniMsgHdr inside.
+ */
+void nl_srv_nl_ready_indication
+(
+   void
+)
+{
+   struct sk_buff *skb = NULL;
+   struct nlmsghdr *nlh;
+   int    err;
+
+   skb = alloc_skb(NLMSG_SPACE(sizeof(driverLoaded)), GFP_KERNEL);
+   if (NULL == skb)
+   {
+      VOS_TRACE( VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_ERROR,
+                 "NLINK: skb alloc fail %s", __func__);
+      return;
+   }
+
+   nlh = (struct nlmsghdr *)skb->data;
+   nlh->nlmsg_pid = 0;  /* from kernel */
+   nlh->nlmsg_flags = 0;
+   nlh->nlmsg_seq = 0;
+   nlh->nlmsg_len = sizeof(driverLoaded);
+   vos_mem_copy(((char *)nlh) + sizeof(struct nlmsghdr),
+          driverLoaded,
+          sizeof(driverLoaded));
+   skb_put(skb, NLMSG_SPACE(sizeof(driverLoaded)));
+
+   /* sender is in group 1<<0 */
+   NETLINK_CB(skb).dst_group = WLAN_NLINK_MCAST_GRP_ID;
+
+   /*multicast the message to all listening processes*/
+   err = netlink_broadcast(nl_srv_sock, skb, 0, 1, GFP_KERNEL);
+   if (err)
+   {
+      VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_INFO_LOW,
+                "NLINK: Ready Indication Send Fail %s, err %d",
+                __func__, err);
+   }
+   return;
+}
+
+/*
+ * Send Net Link interface close indication to application daemon
+ * Each netlink message will have a message of type tAniMsgHdr inside.
+ */
+void nl_srv_nl_close_indication
+(
+   int pid
+)
+{
+   struct sk_buff *skb = NULL;
+   struct nlmsghdr *nlh;
+   int err;
+
+   skb = alloc_skb(sizeof(driverUnLoaded),GFP_KERNEL);
+   if (NULL == skb)
+   {
+      VOS_TRACE( VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_ERROR,
+                 "NLINK: skb alloc fail %s", __func__);
+      return;
+   }
+
+   nlh = (struct nlmsghdr *)skb->data;
+   nlh->nlmsg_pid = 0;  /* from kernel */
+   nlh->nlmsg_flags = 0;
+   nlh->nlmsg_seq = 0;
+   nlh->nlmsg_len = sizeof(driverUnLoaded);
+   vos_mem_copy(((char *)nlh) + sizeof(struct nlmsghdr),
+          driverUnLoaded,
+          sizeof(driverUnLoaded));
+   skb_put(skb, NLMSG_SPACE(sizeof(driverUnLoaded)));
+
+   /* sender is in group 1<<0 */
+   NETLINK_CB(skb).dst_group = 0;
+   err = netlink_unicast(nl_srv_sock, skb, pid, MSG_DONTWAIT);
+   if (err)
+   {
+      VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_INFO_LOW,
+                "NLINK: Close Indication Send Fail %s", __func__);
+   }
+
+   return;
+}
+#endif /* WLAN_KD_READY_NOTIFIER */
+
+/*
+ * nl_srv_is_initialized() - This function is used check if the netlink
+ * service is initialized
+ *
+ * This function is used check if the netlink service is initialized
+ *
+ * Return: Return -EPERM if the service is not initialized
+ *
+ */
+int nl_srv_is_initialized()
+{
+   if (nl_srv_sock)
+       return 0;
+   else
+       return -EPERM;
+}

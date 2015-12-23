@@ -1,25 +1,5 @@
 /*
- * Copyright (c) 2012-2013, The Linux Foundation. All rights reserved.
- *
- * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
- *
- *
- * Permission to use, copy, modify, and/or distribute this software for
- * any purpose with or without fee is hereby granted, provided that the
- * above copyright notice and this permission notice appear in all
- * copies.
- *
- * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
- * WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
- * WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
- * AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL
- * DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
- * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
- * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
- * PERFORMANCE OF THIS SOFTWARE.
- */
-/*
- * Copyright (c) 2012, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2015 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -40,7 +20,15 @@
  */
 
 /*
- * Airgo Networks, Inc proprietary. All rights reserved.
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
+ */
+
+
+
+
+/*
  * This file limApi.cc contains the functions that are
  * exported by LIM to other modules.
  *
@@ -52,7 +40,7 @@
  *
  */
 #include "palTypes.h"
-#include "wniCfgSta.h"
+#include "wniCfg.h"
 #include "wniApi.h"
 #include "sirCommon.h"
 #include "sirDebug.h"
@@ -116,22 +104,23 @@ static void __limInitScanVars(tpAniSirGlobal pMac)
     pMac->lim.gLimMlmScanResultLength = 0;
     pMac->lim.gLimSmeScanResultLength = 0;
 
-    palZeroMemory(pMac->hHdd, pMac->lim.gLimCachedScanHashTable,
-                    sizeof(pMac->lim.gLimCachedScanHashTable));
+    vos_mem_set(pMac->lim.gLimCachedScanHashTable,
+                sizeof(pMac->lim.gLimCachedScanHashTable), 0);
 
 #ifdef WLAN_FEATURE_ROAM_SCAN_OFFLOAD
 
     pMac->lim.gLimMlmLfrScanResultLength = 0;
     pMac->lim.gLimSmeLfrScanResultLength = 0;
 
-    palZeroMemory(pMac->hHdd, pMac->lim.gLimCachedLfrScanHashTable,
-                    sizeof(pMac->lim.gLimCachedLfrScanHashTable));
+    vos_mem_set(pMac->lim.gLimCachedLfrScanHashTable,
+                sizeof(pMac->lim.gLimCachedLfrScanHashTable), 0);
 #endif
     pMac->lim.gLimBackgroundScanChannelId = 0;
     pMac->lim.gLimBackgroundScanStarted = 0;
     pMac->lim.gLimRestoreCBNumScanInterval = LIM_RESTORE_CB_NUM_SCAN_INTERVAL_DEFAULT;
     pMac->lim.gLimRestoreCBCount = 0;
-    palZeroMemory(pMac->hHdd, pMac->lim.gLimLegacyBssidList, sizeof(pMac->lim.gLimLegacyBssidList));
+    vos_mem_set(pMac->lim.gLimLegacyBssidList,
+                sizeof(pMac->lim.gLimLegacyBssidList), 0);
 
     /* Fill in default values */
     pMac->lim.gLimTriggerBackgroundScanDuringQuietBss = 0;
@@ -139,8 +128,8 @@ static void __limInitScanVars(tpAniSirGlobal pMac)
 
     // abort scan is used to abort an on-going scan
     pMac->lim.abortScan = 0;
-    palZeroMemory(pMac->hHdd, &pMac->lim.scanChnInfo, sizeof(tLimScanChnInfo));
-    palZeroMemory(pMac->hHdd, &pMac->lim.dfschannelList, sizeof(tSirDFSChannelList));
+    vos_mem_set(&pMac->lim.scanChnInfo, sizeof(tLimScanChnInfo), 0);
+    vos_mem_set(&pMac->lim.dfschannelList, sizeof(tSirDFSChannelList), 0);
 
 //WLAN_SUSPEND_LINK Related
     pMac->lim.gpLimSuspendCallback = NULL;
@@ -152,7 +141,8 @@ static void __limInitScanVars(tpAniSirGlobal pMac)
 static void __limInitBssVars(tpAniSirGlobal pMac)
 {
 
-    palZeroMemory(pMac->hHdd,  (void*)pMac->lim.gpSession,   sizeof(*pMac->lim.gpSession)*pMac->lim.maxBssId);
+    vos_mem_set((void*)pMac->lim.gpSession,
+                 sizeof(*pMac->lim.gpSession)*pMac->lim.maxBssId, 0);
 
 
     //pMac->lim.gpLimStartBssReq = NULL;
@@ -165,9 +155,9 @@ static void __limInitBssVars(tpAniSirGlobal pMac)
 
    // Place holder for BSS description that we're
    // currently joined with
-   palZeroMemory(pMac->hHdd, &pMac->lim.gLimCurrentBssId, sizeof(tSirMacAddr));
+   vos_mem_set(&pMac->lim.gLimCurrentBssId, sizeof(tSirMacAddr), 0);
    pMac->lim.gLimCurrentChannelId = HAL_INVALID_CHANNEL_ID;
-   palZeroMemory(pMac->hHdd, &pMac->lim.gLimCurrentSSID, sizeof(tSirMacSSid));
+   vos_mem_set(&pMac->lim.gLimCurrentSSID, sizeof(tSirMacSSid), 0);
    pMac->lim.gLimCurrentBssCaps = 0;
    QosCaps is a bit map of various qos capabilities - see defn above
    pMac->lim.gLimCurrentBssQosCaps = 0;
@@ -176,9 +166,9 @@ static void __limInitBssVars(tpAniSirGlobal pMac)
 
    // Place holder for BSS description that
    // we're currently Reassociating
-   palZeroMemory(pMac->hHdd, &pMac->lim.gLimReassocBssId, sizeof(tSirMacAddr));
+   vos_mem_set(&pMac->lim.gLimReassocBssId, sizeof(tSirMacAddr), 0);
    pMac->lim.gLimReassocChannelId = 0;
-   palZeroMemory(pMac->hHdd, &pMac->lim.gLimReassocSSID, sizeof(tSirMacSSid));
+   vos_mem_set(&pMac->lim.gLimReassocSSID, sizeof(tSirMacSSid), 0);
    pMac->lim.gLimReassocBssCaps = 0;
    pMac->lim.gLimReassocBssQosCaps = 0;
    pMac->lim.gLimReassocBssPropCap = 0;
@@ -213,8 +203,15 @@ static void __limInitStatsVars(tpAniSirGlobal pMac)
     // Heart-Beat interval value
     pMac->lim.gLimHeartBeatCount = 0;
 
+    vos_mem_zero(pMac->lim.gLimHeartBeatApMac[0],
+            sizeof(tSirMacAddr));
+    vos_mem_zero(pMac->lim.gLimHeartBeatApMac[1],
+            sizeof(tSirMacAddr));
+    pMac->lim.gLimHeartBeatApMacIndex = 0;
+
     // Statistics to keep track of no. beacons rcvd in heart beat interval
-    palZeroMemory(pMac->hHdd, pMac->lim.gLimHeartBeatBeaconStats, sizeof(pMac->lim.gLimHeartBeatBeaconStats));
+    vos_mem_set(pMac->lim.gLimHeartBeatBeaconStats,
+                sizeof(pMac->lim.gLimHeartBeatBeaconStats), 0);
 
 #ifdef WLAN_DEBUG    
     // Debug counters
@@ -224,7 +221,7 @@ static void __limInitStatsVars(tpAniSirGlobal pMac)
     pMac->lim.numLearn = 0;
     pMac->lim.numLearnIgnore = 0;
     pMac->lim.numSme = 0;
-    palZeroMemory(pMac->hHdd, pMac->lim.numMAC, sizeof(pMac->lim.numMAC));
+    vos_mem_set(pMac->lim.numMAC, sizeof(pMac->lim.numMAC), 0);
     pMac->lim.gLimNumAssocReqDropInvldState = 0;
     pMac->lim.gLimNumAssocReqDropACRejectTS = 0;
     pMac->lim.gLimNumAssocReqDropACRejectSta = 0;
@@ -271,17 +268,17 @@ static void __limInitStates(tpAniSirGlobal pMac)
      * when SME_START_BSS_REQ is received.
      */
 
-    palZeroMemory(pMac->hHdd, &pMac->lim.gLimOverlap11gParams, sizeof(tLimProtStaParams));
-    palZeroMemory(pMac->hHdd, &pMac->lim.gLimOverlap11aParams, sizeof(tLimProtStaParams));
-    palZeroMemory(pMac->hHdd, &pMac->lim.gLimOverlapHt20Params, sizeof(tLimProtStaParams));
-    palZeroMemory(pMac->hHdd, &pMac->lim.gLimOverlapNonGfParams, sizeof(tLimProtStaParams));
-    palZeroMemory(pMac->hHdd, &pMac->lim.gLimNoShortParams, sizeof(tLimNoShortParams));
-    palZeroMemory(pMac->hHdd, &pMac->lim.gLimNoShortSlotParams, sizeof(tLimNoShortSlotParams));
+    vos_mem_set(&pMac->lim.gLimOverlap11gParams, sizeof(tLimProtStaParams), 0);
+    vos_mem_set(&pMac->lim.gLimOverlap11aParams, sizeof(tLimProtStaParams), 0);
+    vos_mem_set(&pMac->lim.gLimOverlapHt20Params, sizeof(tLimProtStaParams), 0);
+    vos_mem_set(&pMac->lim.gLimOverlapNonGfParams, sizeof(tLimProtStaParams), 0);
+    vos_mem_set(&pMac->lim.gLimNoShortParams, sizeof(tLimNoShortParams), 0);
+    vos_mem_set(&pMac->lim.gLimNoShortSlotParams, sizeof(tLimNoShortSlotParams), 0);
 
     pMac->lim.gLimPhyMode = 0; 
     pMac->lim.scanStartTime = 0;    // used to measure scan time
 
-    palZeroMemory(pMac->hHdd, pMac->lim.gLimMyMacAddr, sizeof(pMac->lim.gLimMyMacAddr));
+    vos_mem_set(pMac->lim.gLimMyMacAddr, sizeof(pMac->lim.gLimMyMacAddr), 0);
     pMac->lim.ackPolicy = 0;
 
 #if 0 /* Moving all these to session specific elements */
@@ -304,22 +301,22 @@ static void __limInitVars(tpAniSirGlobal pMac)
     // WDS info
     pMac->lim.gLimNumWdsInfoInd = 0;
     pMac->lim.gLimNumWdsInfoSet = 0;
-    palZeroMemory(pMac->hHdd, &pMac->lim.gLimWdsInfo, sizeof(tSirWdsInfo));
+    vos_mem_set(&pMac->lim.gLimWdsInfo, sizeof(tSirWdsInfo), 0);
     /* initialize some parameters */
     limInitWdsInfoParams(pMac);
 
     // Deferred Queue Paramters
-    palZeroMemory(pMac->hHdd, &pMac->lim.gLimDeferredMsgQ, sizeof(tSirAddtsReq));
+    vos_mem_set(&pMac->lim.gLimDeferredMsgQ, sizeof(tSirAddtsReq), 0);
 
     // addts request if any - only one can be outstanding at any time
-    palZeroMemory(pMac->hHdd, &pMac->lim.gLimAddtsReq, sizeof(tSirAddtsReq));
+    vos_mem_set(&pMac->lim.gLimAddtsReq, sizeof(tSirAddtsReq) , 0);
     pMac->lim.gLimAddtsSent = 0;
     pMac->lim.gLimAddtsRspTimerCount = 0;
 
     //protection related config cache
-    palZeroMemory(pMac->hHdd, &pMac->lim.cfgProtection, sizeof(tCfgProtection));
+    vos_mem_set(&pMac->lim.cfgProtection, sizeof(tCfgProtection), 0);
     pMac->lim.gLimProtectionControl = 0;
-    palZeroMemory(pMac->hHdd, &pMac->lim.gLimAlternateRadio, sizeof(tSirAlternateRadioInfo));
+    vos_mem_set(&pMac->lim.gLimAlternateRadio, sizeof(tSirAlternateRadioInfo), 0);
     SET_LIM_PROCESS_DEFD_MESGS(pMac, true);
 
 #if 0
@@ -341,24 +338,30 @@ static void __limInitVars(tpAniSirGlobal pMac)
     pMac->lim.pDialogueTokenHead = NULL;
     pMac->lim.pDialogueTokenTail = NULL;
 
-    palZeroMemory(pMac->hHdd, &pMac->lim.tspecInfo, sizeof(tLimTspecInfo) * LIM_NUM_TSPEC_MAX);
+    vos_mem_set(&pMac->lim.tspecInfo,
+                sizeof(tLimTspecInfo) * LIM_NUM_TSPEC_MAX, 0);
 
     // admission control policy information
-    palZeroMemory(pMac->hHdd, &pMac->lim.admitPolicyInfo, sizeof(tLimAdmitPolicyInfo));
+    vos_mem_set(&pMac->lim.admitPolicyInfo, sizeof(tLimAdmitPolicyInfo), 0);
 
     pMac->lim.gLastBeaconDtimCount = 0;
     pMac->lim.gLastBeaconDtimPeriod = 0;
 
     //Scan in Power Save Flag
     pMac->lim.gScanInPowersave = 0;
+    pMac->lim.probeCounter = 0;
+    pMac->lim.maxProbe = 0;
+    pMac->lim.txBdToken = 0;
+
+    pMac->lim.EnableTdls2040BSSCoexIE = 1;
 }
 
 static void __limInitAssocVars(tpAniSirGlobal pMac)
 {
     tANI_U32 val;
 #if 0
-    palZeroMemory(pMac->hHdd, pMac->lim.gpLimAIDpool,
-                  sizeof(*pMac->lim.gpLimAIDpool) * (WNI_CFG_ASSOC_STA_LIMIT_STAMAX+1));
+    vos_mem_set(pMac->lim.gpLimAIDpool,
+          sizeof(*pMac->lim.gpLimAIDpool) * (WNI_CFG_ASSOC_STA_LIMIT_STAMAX+1), 0);
     pMac->lim.freeAidHead = 0;
     pMac->lim.freeAidTail = 0;
 #endif
@@ -367,6 +370,7 @@ static void __limInitAssocVars(tpAniSirGlobal pMac)
         limLog( pMac, LOGP, FL( "cfg get assoc sta limit failed" ));
     }
     pMac->lim.gLimAssocStaLimit = val;
+    pMac->lim.gLimIbssStaLimit = val;
 
     // Place holder for current authentication request
     // being handled
@@ -376,9 +380,9 @@ static void __limInitAssocVars(tpAniSirGlobal pMac)
     /// MAC level Pre-authentication related globals
     pMac->lim.gLimPreAuthChannelNumber = 0;
     pMac->lim.gLimPreAuthType = eSIR_OPEN_SYSTEM;
-    palZeroMemory(pMac->hHdd, &pMac->lim.gLimPreAuthPeerAddr, sizeof(tSirMacAddr));
+    vos_mem_set(&pMac->lim.gLimPreAuthPeerAddr, sizeof(tSirMacAddr), 0);
     pMac->lim.gLimNumPreAuthContexts = 0;
-    palZeroMemory(pMac->hHdd, &pMac->lim.gLimPreAuthTimerTable, sizeof(tLimPreAuthTable));
+    vos_mem_set(&pMac->lim.gLimPreAuthTimerTable, sizeof(tLimPreAuthTable), 0);
 
     // Placed holder to deauth reason
     pMac->lim.gLimDeauthReasonCode = 0;
@@ -386,15 +390,13 @@ static void __limInitAssocVars(tpAniSirGlobal pMac)
     // Place holder for Pre-authentication node list
     pMac->lim.pLimPreAuthList = NULL;
 
-    // Send Disassociate frame threshold parameters
-    pMac->lim.gLimDisassocFrameThreshold = LIM_SEND_DISASSOC_FRAME_THRESHOLD;
-    pMac->lim.gLimDisassocFrameCredit = 0;
-
     //One cache for each overlap and associated case.
-    palZeroMemory(pMac->hHdd, pMac->lim.protStaOverlapCache, sizeof(tCacheParams) * LIM_PROT_STA_OVERLAP_CACHE_SIZE);
-    palZeroMemory(pMac->hHdd, pMac->lim.protStaCache, sizeof(tCacheParams) * LIM_PROT_STA_CACHE_SIZE);
+    vos_mem_set(pMac->lim.protStaOverlapCache,
+                sizeof(tCacheParams) * LIM_PROT_STA_OVERLAP_CACHE_SIZE, 0);
+    vos_mem_set(pMac->lim.protStaCache,
+                sizeof(tCacheParams) * LIM_PROT_STA_CACHE_SIZE, 0);
 
-#if  defined (WLAN_FEATURE_VOWIFI_11R) || defined (FEATURE_WLAN_CCX) || defined(FEATURE_WLAN_LFR)
+#if  defined (WLAN_FEATURE_VOWIFI_11R) || defined (FEATURE_WLAN_ESE) || defined(FEATURE_WLAN_LFR)
     pMac->lim.pSessionEntry = NULL;
     pMac->lim.reAssocRetryAttempt = 0;
 #endif
@@ -405,7 +407,7 @@ static void __limInitAssocVars(tpAniSirGlobal pMac)
 static void __limInitTitanVars(tpAniSirGlobal pMac)
 {
 #if 0
-    palZeroMemory(pMac->hHdd, &pMac->lim.gLimChannelSwitch, sizeof(tLimChannelSwitchInfo));
+    vos_mem_set(&pMac->lim.gLimChannelSwitch, sizeof(tLimChannelSwitchInfo), 0);
     pMac->lim.gLimChannelSwitch.state               = eLIM_CHANNEL_SWITCH_IDLE;
     pMac->lim.gLimChannelSwitch.secondarySubBand    = PHY_SINGLE_CHANNEL_CENTERED;
 #endif
@@ -576,15 +578,15 @@ static tSirRetStatus __limInitConfig( tpAniSirGlobal pMac )
       limHandleCFGparamUpdate do we want to update this? */
    if(wlan_cfgGetInt(pMac, WNI_CFG_SHORT_PREAMBLE, &val1) != eSIR_SUCCESS)
    {
-      limLog(pMac, LOGP, FL("cfg get short preamble failed"));
+      limLog(pMac, LOGE, FL("cfg get short preamble failed"));
       return eSIR_FAILURE;
    }
 
    /* WNI_CFG_MAX_PS_POLL */
 
    /* Allocate and fill in power save configuration. */
-   if (palAllocateMemory(pMac->hHdd, (void **)&pPowerSaveConfig,
-        sizeof(tSirPowerSaveCfg)) != eHAL_STATUS_SUCCESS)
+   pPowerSaveConfig = vos_mem_malloc(sizeof(tSirPowerSaveCfg));
+   if (NULL == pPowerSaveConfig)
    {
       PELOGE(limLog(pMac, LOGE, FL("LIM: Cannot allocate memory for power save "
                                   "configuration"));)
@@ -595,8 +597,7 @@ static tSirRetStatus __limInitConfig( tpAniSirGlobal pMac )
     * already dispatched during initialization process. Re-using the present
     * configuration mask
     */
-   palCopyMemory(pMac->hHdd, pPowerSaveConfig, (tANI_U8 *)&pMac->pmm.gPmmCfg, 
-                 sizeof(tSirPowerSaveCfg));
+   vos_mem_copy(pPowerSaveConfig, (tANI_U8 *)&pMac->pmm.gPmmCfg, sizeof(tSirPowerSaveCfg));
 
    /* Note: it is okay to do this since DAL/HAL is alrady started */
    if ( (pmmSendPowerSaveCfg(pMac, pPowerSaveConfig)) != eSIR_SUCCESS)
@@ -621,7 +622,39 @@ static tSirRetStatus __limInitConfig( tpAniSirGlobal pMac )
       limLog(pMac, LOGP, FL("cfg get disableLDPCWithTxbfAP failed"));
       return eSIR_FAILURE;
    }
+#ifdef FEATURE_WLAN_TDLS
+   if(wlan_cfgGetInt(pMac, WNI_CFG_TDLS_BUF_STA_ENABLED,(tANI_U32 *) &pMac->lim.gLimTDLSBufStaEnabled) != eSIR_SUCCESS)
+   {
+       limLog(pMac, LOGP, FL("cfg get LimTDLSBufStaEnabled failed"));
+       return eSIR_FAILURE;
+   }
+   if(wlan_cfgGetInt(pMac, WNI_CFG_TDLS_QOS_WMM_UAPSD_MASK,(tANI_U32 *) &pMac->lim.gLimTDLSUapsdMask) != eSIR_SUCCESS)
+   {
+       limLog(pMac, LOGP, FL("cfg get LimTDLSUapsdMask failed"));
+       return eSIR_FAILURE;
+   }
+   if(wlan_cfgGetInt(pMac, WNI_CFG_TDLS_OFF_CHANNEL_ENABLED,(tANI_U32 *) &pMac->lim.gLimTDLSOffChannelEnabled) != eSIR_SUCCESS)
+   {
+       limLog(pMac, LOGP, FL("cfg get LimTDLSUapsdMask failed"));
+       return eSIR_FAILURE;
+   }
 
+   if(wlan_cfgGetInt(pMac, WNI_CFG_TDLS_WMM_MODE_ENABLED,(tANI_U32 *) &pMac->lim.gLimTDLSWmmMode) != eSIR_SUCCESS)
+   {
+       limLog(pMac, LOGP, FL("cfg get LimTDLSWmmMode failed"));
+       return eSIR_FAILURE;
+   }
+#endif
+
+   if (eSIR_SUCCESS !=
+       wlan_cfgGetInt(pMac, WNI_CFG_DEBUG_P2P_REMAIN_ON_CHANNEL,
+                      (tANI_U32 *)&pMac->lim.gDebugP2pRemainOnChannel))
+    {
+        limLog( pMac, LOGE,
+                "%s: Couldn't get WNI_CFG_DEBUG_P2P_REMAIN_ON_CHANNEL value",
+                 __func__);
+        pMac->lim.gDebugP2pRemainOnChannel = 0;
+   }
    return eSIR_SUCCESS;
 }
 
@@ -634,7 +667,7 @@ tSirRetStatus limStart(tpAniSirGlobal pMac)
 {
    tSirResultCodes retCode = eSIR_SUCCESS;
 
-   PELOG1(limLog(pMac, LOG1, FL(" enter"));)
+   limLog(pMac, LOG1, FL(" enter"));
 
    if (pMac->lim.gLimSmeState == eLIM_SME_OFFLINE_STATE)
    {
@@ -662,7 +695,7 @@ tSirRetStatus limStart(tpAniSirGlobal pMac)
       * other than OFFLINE. Return response to host and
       * log error
       */
-      limLog(pMac, LOGE, FL("Invalid SME state %X"),pMac->lim.gLimSmeState );
+      limLog(pMac, LOGE, FL("Invalid SME state %d"),pMac->lim.gLimSmeState );
       retCode = eSIR_FAILURE;
    }
    
@@ -816,7 +849,7 @@ limCleanup(tpAniSirGlobal pMac)
         VOS_TRACE(VOS_MODULE_ID_PE, VOS_TRACE_LEVEL_INFO,
                 FL("Fixing leak! Deallocating pLimMgmtRegistration node"));
 
-        palFreeMemory(pMac, pLimMgmtRegistration);
+        vos_mem_free(pLimMgmtRegistration);
     }
 
     vos_list_destroy(&pMac->lim.gLimMgmtFrameRegistratinQueue);
@@ -827,7 +860,7 @@ limCleanup(tpAniSirGlobal pMac)
     // free up preAuth table
     if (pMac->lim.gLimPreAuthTimerTable.pTable != NULL)
     {
-        palFreeMemory(pMac->hHdd, pMac->lim.gLimPreAuthTimerTable.pTable);
+        vos_mem_vfree(pMac->lim.gLimPreAuthTimerTable.pTable);
         pMac->lim.gLimPreAuthTimerTable.pTable = NULL;
         pMac->lim.gLimPreAuthTimerTable.numEntry = 0;
     }
@@ -839,42 +872,42 @@ limCleanup(tpAniSirGlobal pMac)
 
     if(NULL != pMac->lim.pDialogueTokenTail)
     {
-        palFreeMemory(pMac->hHdd, (void *) pMac->lim.pDialogueTokenTail);
+        vos_mem_free(pMac->lim.pDialogueTokenTail);
         pMac->lim.pDialogueTokenTail = NULL;
     }
 
     # if 0
     if (pMac->lim.gpLimStartBssReq != NULL)
     {
-        palFreeMemory(pMac->hHdd, pMac->lim.gpLimStartBssReq);
+        vos_mem_free(pMac->lim.gpLimStartBssReq);
         pMac->lim.gpLimStartBssReq = NULL;
     }
     #endif
 
     if (pMac->lim.gpLimMlmSetKeysReq != NULL)
     {
-        palFreeMemory(pMac->hHdd, pMac->lim.gpLimMlmSetKeysReq);
+        vos_mem_free(pMac->lim.gpLimMlmSetKeysReq);
         pMac->lim.gpLimMlmSetKeysReq = NULL;
     }
 
     #if 0
     if (pMac->lim.gpLimJoinReq != NULL)
     {
-        palFreeMemory(pMac->hHdd, pMac->lim.gpLimJoinReq);
+        vos_mem_free(pMac->lim.gpLimJoinReq);
         pMac->lim.gpLimJoinReq = NULL;
     }
     #endif
 
     if (pMac->lim.gpLimMlmAuthReq != NULL)
     {
-        palFreeMemory(pMac->hHdd, pMac->lim.gpLimMlmAuthReq);
+        vos_mem_free(pMac->lim.gpLimMlmAuthReq);
         pMac->lim.gpLimMlmAuthReq = NULL;
     }
 
 #if 0
     if (pMac->lim.gpLimMlmJoinReq != NULL)
     {
-        palFreeMemory(pMac->hHdd, pMac->lim.gpLimMlmJoinReq);
+        vos_mem_free(pMac->lim.gpLimMlmJoinReq);
         pMac->lim.gpLimMlmJoinReq = NULL;
     }
 #endif
@@ -882,40 +915,40 @@ limCleanup(tpAniSirGlobal pMac)
     #if 0
     if (pMac->lim.gpLimReassocReq != NULL)
     {
-        palFreeMemory(pMac->hHdd, pMac->lim.gpLimReassocReq);
+        vos_mem_free(pMac->lim.gpLimReassocReq);
         pMac->lim.gpLimReassocReq = NULL;
     }
     #endif
 
     if (pMac->lim.gpLimMlmRemoveKeyReq != NULL)
     {
-        palFreeMemory(pMac->hHdd, pMac->lim.gpLimMlmRemoveKeyReq);
+        vos_mem_free(pMac->lim.gpLimMlmRemoveKeyReq);
         pMac->lim.gpLimMlmRemoveKeyReq = NULL;
     }
 
     if (pMac->lim.gpDefdSmeMsgForNOA != NULL)
     {
-        palFreeMemory(pMac->hHdd, pMac->lim.gpDefdSmeMsgForNOA);
+        vos_mem_free(pMac->lim.gpDefdSmeMsgForNOA);
         pMac->lim.gpDefdSmeMsgForNOA = NULL;
     }
 
     if (pMac->lim.gpLimMlmScanReq != NULL)
     {
-        palFreeMemory(pMac->hHdd, pMac->lim.gpLimMlmScanReq);
+        vos_mem_free(pMac->lim.gpLimMlmScanReq);
         pMac->lim.gpLimMlmScanReq = NULL;
     }
 
 #if 0
     if(NULL != pMac->lim.beacon)
     {
-        palFreeMemory(pMac->hHdd, (void*) pMac->lim.beacon);
+        vos_mem_free((void*) pMac->lim.beacon);
         pMac->lim.beacon = NULL;
      }
 #endif
     #if 0
     if(NULL != pMac->lim.assocReq)
     {
-        palFreeMemory(pMac->hHdd, (void*) pMac->lim.assocReq);
+        vos_mem_free((void*) pMac->lim.assocReq);
         pMac->lim.assocReq= NULL;
      }
     #endif
@@ -923,7 +956,7 @@ limCleanup(tpAniSirGlobal pMac)
 #if 0
     if(NULL != pMac->lim.assocRsp)
     {
-        palFreeMemory(pMac->hHdd, (void*) pMac->lim.assocRsp);
+        vos_mem_free((void*) pMac->lim.assocRsp);
         pMac->lim.assocRsp= NULL;
      }
 #endif
@@ -957,6 +990,8 @@ limCleanup(tpAniSirGlobal pMac)
 
 tSirRetStatus peOpen(tpAniSirGlobal pMac, tMacOpenParameters *pMacOpenParam)
 {
+    if (eDRIVER_TYPE_MFG == pMacOpenParam->driverType)
+        return eSIR_SUCCESS;
     pMac->lim.maxBssId = pMacOpenParam->maxBssId;
     pMac->lim.maxStation = pMacOpenParam->maxStation;
     vos_spin_lock_init( &pMac->sys.lock );
@@ -967,55 +1002,32 @@ tSirRetStatus peOpen(tpAniSirGlobal pMac, tMacOpenParameters *pMacOpenParam)
          return eSIR_FAILURE;
     }
 
-    if (eHAL_STATUS_SUCCESS != palAllocateMemory(pMac->hHdd,
-              (void **) &pMac->lim.limTimers.gpLimCnfWaitTimer, sizeof(TX_TIMER)*pMac->lim.maxStation))
+    pMac->lim.limTimers.gpLimCnfWaitTimer = vos_mem_vmalloc(sizeof(TX_TIMER) * pMac->lim.maxStation);
+    if (NULL == pMac->lim.limTimers.gpLimCnfWaitTimer)
     {
         PELOGE(limLog(pMac, LOGE, FL("memory allocate failed!"));)
         return eSIR_FAILURE;
     }
 
-#if 0
-    if (eHAL_STATUS_SUCCESS != palAllocateMemory(pMac->hHdd,
-              (void **) &pMac->lim.gpLimAIDpool, 
-              sizeof(*pMac->lim.gpLimAIDpool) * (WNI_CFG_ASSOC_STA_LIMIT_STAMAX+1)))
-    {
-        PELOGE(limLog(pMac, LOGE, FL("memory allocate failed!"));)
-        return eSIR_FAILURE;
-    }
-#endif
-    if (eHAL_STATUS_SUCCESS != palAllocateMemory(pMac->hHdd,
-        (void **) &pMac->lim.gpSession, sizeof(tPESession)* pMac->lim.maxBssId))
+    pMac->lim.gpSession = vos_mem_vmalloc(sizeof(tPESession)* pMac->lim.maxBssId);
+    if (NULL == pMac->lim.gpSession)
     {
         limLog(pMac, LOGE, FL("memory allocate failed!"));
+        vos_mem_vfree(pMac->lim.limTimers.gpLimCnfWaitTimer);
         return eSIR_FAILURE;
     }
  
-    palZeroMemory(pMac->hHdd, pMac->lim.gpSession, sizeof(tPESession)*pMac->lim.maxBssId);
+    vos_mem_set(pMac->lim.gpSession, sizeof(tPESession)*pMac->lim.maxBssId, 0);
 
-
- /*
-    if (eHAL_STATUS_SUCCESS != palAllocateMemory(pMac->hHdd,
-              (void **) &pMac->dph.dphHashTable.pHashTable, sizeof(tpDphHashNode)*pMac->lim.maxStation))
-    {
-        PELOGE(limLog(pMac, LOGE, FL("memory allocate failed!"));)
-        return eSIR_FAILURE;
-    }
-
-    if (eHAL_STATUS_SUCCESS != palAllocateMemory(pMac->hHdd,
-              (void **) &pMac->dph.dphHashTable.pDphNodeArray, sizeof(tDphHashNode)*pMac->lim.maxStation))
-    {
-        PELOGE(limLog(pMac, LOGE, FL("memory allocate failed!"));)
-        return eSIR_FAILURE;
-    }
-    */
-
-    if (eHAL_STATUS_SUCCESS != palAllocateMemory(pMac->hHdd,
-              (void **) &pMac->pmm.gPmmTim.pTim, sizeof(tANI_U8)*pMac->lim.maxStation))
+    pMac->pmm.gPmmTim.pTim = vos_mem_malloc(sizeof(tANI_U8)*pMac->lim.maxStation);
+    if (NULL == pMac->pmm.gPmmTim.pTim)
     {
         PELOGE(limLog(pMac, LOGE, FL("memory allocate failed for pTim!"));)
+        vos_mem_vfree(pMac->lim.limTimers.gpLimCnfWaitTimer);
+        vos_mem_vfree(pMac->lim.gpSession);
         return eSIR_FAILURE;
     }
-    palZeroMemory(pMac->hHdd, pMac->pmm.gPmmTim.pTim, sizeof(tANI_U8)*pMac->lim.maxStation);
+    vos_mem_set(pMac->pmm.gPmmTim.pTim, sizeof(tANI_U8)*pMac->lim.maxStation, 0);
 
     pMac->lim.mgmtFrameSessionId = 0xff;
     pMac->lim.deferredMsgCnt = 0;
@@ -1023,9 +1035,17 @@ tSirRetStatus peOpen(tpAniSirGlobal pMac, tMacOpenParameters *pMacOpenParam)
     if( !VOS_IS_STATUS_SUCCESS( vos_lock_init( &pMac->lim.lkPeGlobalLock ) ) )
     {
         PELOGE(limLog(pMac, LOGE, FL("pe lock init failed!"));)
+        vos_mem_vfree(pMac->lim.limTimers.gpLimCnfWaitTimer);
+        pMac->lim.limTimers.gpLimCnfWaitTimer = NULL;
+        vos_mem_vfree(pMac->lim.gpSession);
+        pMac->lim.gpSession = NULL;
+        vos_mem_free(pMac->pmm.gPmmTim.pTim);
+        pMac->pmm.gPmmTim.pTim = NULL;
         return eSIR_FAILURE;
     }
+    pMac->lim.deauthMsgCnt = 0;
     pMac->lim.retryPacketCnt = 0;
+    pMac->lim.gLimIbssRetryCnt = 0;
 
     /*
      * peOpen is successful by now, so it is right time to initialize
@@ -1035,6 +1055,7 @@ tSirRetStatus peOpen(tpAniSirGlobal pMac, tMacOpenParameters *pMacOpenParam)
 #ifdef LIM_TRACE_RECORD
     MTRACE(limTraceInit(pMac));
 #endif
+    lim_register_debug_callback();
     return eSIR_SUCCESS;
 }
 
@@ -1061,22 +1082,12 @@ tSirRetStatus peClose(tpAniSirGlobal pMac)
             peDeleteSession(pMac,&pMac->lim.gpSession[i]);
         }
     }
-    palFreeMemory(pMac->hHdd, pMac->lim.limTimers.gpLimCnfWaitTimer);
+    vos_mem_vfree(pMac->lim.limTimers.gpLimCnfWaitTimer);
     pMac->lim.limTimers.gpLimCnfWaitTimer = NULL;
-#if 0
-    palFreeMemory(pMac->hHdd, pMac->lim.gpLimAIDpool);
-    pMac->lim.gpLimAIDpool = NULL;
-#endif
-    
-    palFreeMemory(pMac->hHdd, pMac->lim.gpSession);
+    vos_mem_vfree(pMac->lim.gpSession);
     pMac->lim.gpSession = NULL;
-    /*
-    palFreeMemory(pMac->hHdd, pMac->dph.dphHashTable.pHashTable);
-    pMac->dph.dphHashTable.pHashTable = NULL;
-    palFreeMemory(pMac->hHdd, pMac->dph.dphHashTable.pDphNodeArray);
-    pMac->dph.dphHashTable.pDphNodeArray = NULL;
-    */
-    palFreeMemory(pMac->hHdd, pMac->pmm.gPmmTim.pTim);
+
+    vos_mem_free(pMac->pmm.gPmmTim.pTim);
     pMac->pmm.gPmmTim.pTim = NULL;
     if( !VOS_IS_STATUS_SUCCESS( vos_lock_destroy( &pMac->lim.lkPeGlobalLock ) ) )
     {
@@ -1170,7 +1181,6 @@ tANI_U8 limIsTimerAllowedInPowerSaveState(tpAniSirGlobal pMac, tSirMsgQ *pMsg)
                 retStatus = FALSE;
                 break;
             /* May allow following timer messages in sleep mode */
-            case SIR_LIM_HASH_MISS_THRES_TIMEOUT:
 
             /* Safe to allow as of today, this triggers background scan
              * which will not be started if the device is in power-save mode
@@ -1208,6 +1218,7 @@ tANI_U8 limIsTimerAllowedInPowerSaveState(tpAniSirGlobal pMac, tSirMsgQ *pMsg)
             case SIR_LIM_ASSOC_FAIL_TIMEOUT:
             case SIR_LIM_AUTH_FAIL_TIMEOUT:
             case SIR_LIM_ADDTS_RSP_TIMEOUT:
+            case SIR_LIM_AUTH_RETRY_TIMEOUT:
                 retStatus = TRUE;
                 break;
 
@@ -1251,6 +1262,35 @@ tANI_U32
 limPostMsgApi(tpAniSirGlobal pMac, tSirMsgQ *pMsg)
 {
     return  vos_mq_post_message(VOS_MQ_ID_PE, (vos_msg_t *) pMsg);
+
+
+} /*** end limPostMsgApi() ***/
+
+/**
+ * limPostMsgApiHighPri()
+ *
+ * FUNCTION:
+ * This function is called from other thread while posting a
+ * message to LIM message Queue gSirLimMsgQ.
+ *
+ * LOGIC:
+ * NA
+ *
+ * ASSUMPTIONS:
+ * NA
+ *
+ * NOTE:
+ * NA
+ *
+ * @param  pMac - Pointer to Global MAC structure
+ * @param  pMsg - Pointer to the message structure
+ * @return None
+ */
+
+tANI_U32
+limPostMsgApiHighPri(tpAniSirGlobal pMac, tSirMsgQ *pMsg)
+{
+    return  vos_mq_post_message_high_pri(VOS_MQ_ID_PE, (vos_msg_t *) pMsg);
 
 
 } /*** end limPostMsgApi() ***/
@@ -1369,9 +1409,15 @@ VOS_STATUS peHandleMgmtFrame( v_PVOID_t pvosGCtx, v_PVOID_t vosBuff)
        FL ( "RxBd=%p mHdr=%p Type: %d Subtype: %d  Sizes:FC%d Mgmt%d"),
        pRxPacketInfo, mHdr, mHdr->fc.type, mHdr->fc.subType, sizeof(tSirMacFrameCtl), sizeof(tSirMacMgmtHdr) );)
 
-    MTRACE(macTrace(pMac, TRACE_CODE_RX_MGMT, NO_SESSION, 
-                        LIM_TRACE_MAKE_RXMGMT(mHdr->fc.subType,  
-                        (tANI_U16) (((tANI_U16) (mHdr->seqControl.seqNumHi << 4)) | mHdr->seqControl.seqNumLo)));)
+#ifdef WLAN_FEATURE_ROAM_SCAN_OFFLOAD
+       if (WDA_GET_ROAMCANDIDATEIND(pRxPacketInfo))
+           limLog(pMac, LOG1, FL("roamCandidateInd %d"),
+                  WDA_GET_ROAMCANDIDATEIND(pRxPacketInfo));
+
+       if (WDA_GET_OFFLOADSCANLEARN(pRxPacketInfo))
+           limLog(pMac, LOG1, FL("offloadScanLearn %d"),
+                  WDA_GET_OFFLOADSCANLEARN(pRxPacketInfo));
+#endif
     }
 
 
@@ -1640,9 +1686,9 @@ limUpdateOverlapStaParam(tpAniSirGlobal pMac, tSirMacAddr bssId, tpLimProtStaPar
     int i;
     if (!pStaParams->numSta)
     {
-        palCopyMemory( pMac->hHdd, pMac->lim.protStaOverlapCache[0].addr,
-                      bssId,
-                      sizeof(tSirMacAddr));
+        vos_mem_copy(pMac->lim.protStaOverlapCache[0].addr,
+                     bssId,
+                     sizeof(tSirMacAddr));
         pMac->lim.protStaOverlapCache[0].active = true;
 
         pStaParams->numSta = 1;
@@ -1654,7 +1700,7 @@ limUpdateOverlapStaParam(tpAniSirGlobal pMac, tSirMacAddr bssId, tpLimProtStaPar
     {
         if (pMac->lim.protStaOverlapCache[i].active)
         {
-            if (palEqualMemory( pMac->hHdd,pMac->lim.protStaOverlapCache[i].addr,
+            if (vos_mem_compare( pMac->lim.protStaOverlapCache[i].addr,
                           bssId,
                           sizeof(tSirMacAddr))) {
                 return; }
@@ -1665,13 +1711,13 @@ limUpdateOverlapStaParam(tpAniSirGlobal pMac, tSirMacAddr bssId, tpLimProtStaPar
 
     if (i == LIM_PROT_STA_OVERLAP_CACHE_SIZE)
     {
-        PELOG1(limLog(pMac, LOG1, FL("Overlap cache is full"));)
+        PELOG1(limLog(pMac, LOGW, FL("Overlap cache is full"));)
     }
     else
     {
-        palCopyMemory( pMac->hHdd, pMac->lim.protStaOverlapCache[i].addr,
-                      bssId,
-                      sizeof(tSirMacAddr));
+        vos_mem_copy(pMac->lim.protStaOverlapCache[i].addr,
+                     bssId,
+                     sizeof(tSirMacAddr));
         pMac->lim.protStaOverlapCache[i].active = true;
 
         pStaParams->numSta++;
@@ -1709,7 +1755,11 @@ limHandleIBSScoalescing(
     tSirRetStatus   retCode;
 
     pHdr = WDA_GET_RX_MAC_HEADER(pRxPacketInfo);
-    if ( (!pBeacon->capabilityInfo.ibss) || (limCmpSSid(pMac, &pBeacon->ssId,psessionEntry) != true) )
+    if ( (!pBeacon->capabilityInfo.ibss) ||
+         ( psessionEntry->privacy !=
+                  (tANI_U8)pBeacon->capabilityInfo.privacy ) ||
+         (limCmpSSid(pMac, &pBeacon->ssId,psessionEntry) != true) ||
+         (psessionEntry->currentOperChannel != pBeacon->channelNumber) )
         /* Received SSID does not match => Ignore received Beacon frame. */
         retCode =  eSIR_LIM_IGNORE_BEACON;
     else
@@ -1720,12 +1770,78 @@ limHandleIBSScoalescing(
         ieLen    = WDA_GET_RX_PAYLOAD_LEN(pRxPacketInfo);
         tsfLater = WDA_GET_RX_TSF_LATER(pRxPacketInfo);
         pIEs = WDA_GET_RX_MPDU_DATA(pRxPacketInfo);
-        PELOG3(limLog(pMac, LOG3, FL("BEFORE Coalescing tsfLater val :%d"), tsfLater);)
+        limLog(pMac, LOG1, FL("BEFORE Coalescing tsfLater val :%d"), tsfLater);
         retCode  = limIbssCoalesce(pMac, pHdr, pBeacon, pIEs, ieLen, tsfLater,psessionEntry);
     }
     return retCode;
 } /*** end limHandleIBSScoalescing() ***/
 
+tAniBool limEncTypeMatched(tpAniSirGlobal pMac, tpSchBeaconStruct  pBeacon,
+                                      tpPESession    pSession)
+{
+    if (!pBeacon || !pSession)
+        return eSIR_FALSE;
+
+    limLog(pMac, LOG1,
+            FL("Beacon/Probe:: Privacy :%d WPA Present:%d RSN Present: %d"),
+                  pBeacon->capabilityInfo.privacy, pBeacon->wpaPresent,
+                                                         pBeacon->rsnPresent);
+    limLog(pMac, LOG1,
+            FL("pSession:: Privacy :%d EncyptionType: %d"),
+                  SIR_MAC_GET_PRIVACY(pSession->limCurrentBssCaps),
+                                               pSession->encryptType);
+
+    /* This is handled by sending probe req due to IOT issues so return TRUE
+     */
+    if ( (pBeacon->capabilityInfo.privacy) !=
+              SIR_MAC_GET_PRIVACY(pSession->limCurrentBssCaps))
+    {
+        limLog(pMac, LOG1, FL("Return for Privacy bit miss match, As "
+             "for this driver need to send the probe request to handle"
+             " IOT issues "));
+        return eSIR_TRUE;
+    }
+
+    /*Open*/
+    if( (pBeacon->capabilityInfo.privacy == 0) &&
+           (pSession->encryptType == eSIR_ED_NONE))
+        return eSIR_TRUE;
+
+    /* WEP */
+    if ( (pBeacon->capabilityInfo.privacy == 1) && (pBeacon->wpaPresent == 0) &&
+            (pBeacon->rsnPresent == 0) &&
+            ( ( pSession->encryptType == eSIR_ED_WEP40 ) ||
+              ( pSession->encryptType == eSIR_ED_WEP104 )
+#ifdef FEATURE_WLAN_WAPI
+              || ( pSession->encryptType == eSIR_ED_WPI )
+#endif
+             ))
+        return eSIR_TRUE;
+
+    /* WPA OR RSN*/
+    if ( (pBeacon->capabilityInfo.privacy == 1) &&
+           ( (pBeacon->wpaPresent == 1) ||
+             ( pBeacon->rsnPresent == 1)) &&
+            ( (pSession->encryptType == eSIR_ED_TKIP) ||
+                (pSession->encryptType == eSIR_ED_CCMP) ||
+                (pSession->encryptType == eSIR_ED_AES_128_CMAC)))
+        return eSIR_TRUE;
+
+    /* For HS2.0, RSN ie is not present
+     * in beacon. Therefore no need to
+     * check for security type in case
+     * OSEN session.
+     */
+    /*TODO: AP capability mismatch
+     * is not checked here because
+     * no logic for beacon parsing
+     * is avilable for HS2.0.
+     */
+    if (pSession->bOSENAssociation)
+        return eSIR_TRUE;
+
+    return eSIR_FALSE;
+}
 
 
 /**
@@ -1760,13 +1876,16 @@ limDetectChangeInApCapabilities(tpAniSirGlobal pMac,
     tSirSmeApNewCaps   apNewCaps;
     tANI_U8            newChannel;
     tSirRetStatus status = eSIR_SUCCESS;
+    tAniBool           securityCapsMatched = eSIR_TRUE;
+
     apNewCaps.capabilityInfo = limGetU16((tANI_U8 *) &pBeacon->capabilityInfo);
     newChannel = (tANI_U8) pBeacon->channelNumber;
 
+    securityCapsMatched = limEncTypeMatched(pMac, pBeacon, psessionEntry);
+
     if ( ( false == psessionEntry->limSentCapsChangeNtf ) &&
-        ( ( ( limIsNullSsid(&pBeacon->ssId) ) ||
-          ( ( !limIsNullSsid(&pBeacon->ssId) ) &&
-             ( false == limCmpSSid(pMac, &pBeacon->ssId, psessionEntry) ) ) ) ||
+        ( ( ( !limIsNullSsid(&pBeacon->ssId) ) &&
+             ( false == limCmpSSid(pMac, &pBeacon->ssId, psessionEntry) ) ) ||
           ( (SIR_MAC_GET_ESS(apNewCaps.capabilityInfo) !=
              SIR_MAC_GET_ESS(psessionEntry->limCurrentBssCaps) ) ||
           ( SIR_MAC_GET_PRIVACY(apNewCaps.capabilityInfo) !=
@@ -1775,10 +1894,11 @@ limDetectChangeInApCapabilities(tpAniSirGlobal pMac,
             SIR_MAC_GET_SHORT_PREAMBLE(psessionEntry->limCurrentBssCaps) ) ||
           ( SIR_MAC_GET_QOS(apNewCaps.capabilityInfo) !=
             SIR_MAC_GET_QOS(psessionEntry->limCurrentBssCaps) ) ||
-          ( newChannel !=  psessionEntry->currentOperChannel )
+          ( newChannel !=  psessionEntry->currentOperChannel )  ||
+          (eSIR_FALSE == securityCapsMatched)
           ) ) )
     {
-        if( false == psessionEntry->fWaitForProbeRsp )
+        if ( false == psessionEntry->fWaitForProbeRsp )
         {
             /* If Beacon capabilities is not matching with the current capability,
              * then send unicast probe request to AP and take decision after
@@ -1811,9 +1931,9 @@ limDetectChangeInApCapabilities(tpAniSirGlobal pMac,
               3 * sizeof(tANI_U8) + // reserved fields
               pBeacon->ssId.length + 1;
 
-        palCopyMemory( pMac->hHdd, apNewCaps.bssId,
-                      psessionEntry->bssId,
-                      sizeof(tSirMacAddr));
+        vos_mem_copy(apNewCaps.bssId,
+                     psessionEntry->bssId,
+                     sizeof(tSirMacAddr));
         if (newChannel != psessionEntry->currentOperChannel)
         {
             PELOGE(limLog(pMac, LOGE, FL("Channel Change from %d --> %d  - "
@@ -1841,8 +1961,8 @@ limDetectChangeInApCapabilities(tpAniSirGlobal pMac,
         }
         else
             apNewCaps.channelId = psessionEntry->currentOperChannel;
-        palCopyMemory( pMac->hHdd, (tANI_U8 *) &apNewCaps.ssId,
-                      (tANI_U8 *) &pBeacon->ssId,
+        vos_mem_copy((tANI_U8 *) &apNewCaps.ssId,
+                     (tANI_U8 *) &pBeacon->ssId,
                       pBeacon->ssId.length + 1);
 
         psessionEntry->fIgnoreCapsChange = false;
@@ -1938,7 +2058,7 @@ tSirRetStatus limUpdateShortSlot(tpAniSirGlobal pMac, tpSirProbeRespBeacon pBeac
     if (nShortSlot != psessionEntry->shortSlotTimeSupported)
     {
         // Short slot time capability of AP has changed. Adopt to it.
-        PELOG1(limLog(pMac, LOG1, FL("Shortslot capability of AP changed: %d"),  nShortSlot);)
+        limLog(pMac, LOG1, FL("Shortslot capability of AP changed: %d"),  nShortSlot);
         ((tpSirMacCapabilityInfo)&psessionEntry->limCurrentBssCaps)->shortSlotTime = (tANI_U16)nShortSlot;
         psessionEntry->shortSlotTimeSupported = nShortSlot;
         pBeaconParams->fShortSlotTime = (tANI_U8) nShortSlot;
@@ -2012,7 +2132,7 @@ void limHandleBmpsStatusInd(tpAniSirGlobal pMac)
         case ePMM_STATE_UAPSD_SLEEP:
         case ePMM_STATE_UAPSD_WT_WAKEUP_RSP:
         case ePMM_STATE_WOWLAN:
-            PELOG1(limLog(pMac, LOG1, FL("Sending EXIT_BMPS_IND to SME "));)
+            limLog(pMac, LOG1, FL("Sending EXIT_BMPS_IND to SME "));
             limSendExitBmpsInd(pMac, eSME_BMPS_STATUS_IND_RCVD);
             break;
 
@@ -2056,7 +2176,8 @@ void limHandleMissedBeaconInd(tpAniSirGlobal pMac, tpSirMsgQ pMsg)
          (pMac->pmm.gPmmState == ePMM_STATE_WOWLAN) )
     {
         pMac->pmm.inMissedBeaconScenario = TRUE;
-        PELOG1(limLog(pMac, LOG1, FL("Sending EXIT_BMPS_IND to SME "));)
+        PELOGE(limLog(pMac, LOGE,
+              FL("Sending EXIT_BMPS_IND to SME due to Missed beacon from FW"));)
         limSendExitBmpsInd(pMac, eSME_MISSED_BEACON_IND_RCVD);
     }
 /* ACTIVE_MODE_HB_OFFLOAD */
@@ -2076,6 +2197,105 @@ void limHandleMissedBeaconInd(tpAniSirGlobal pMac, tpSirMsgQ pMsg)
             FL("Received SIR_HAL_MISSED_BEACON_IND while in incorrect state: %d"),
             pMac->pmm.gPmmState);
     }
+    return;
+}
+
+
+void limUpdateLostLinkParams(tpAniSirGlobal pMac,
+                     tpPESession psessionEntry, tANI_U8 *pRxPacketInfo)
+{
+    tpSirSmeLostLinkParamsInd pSmeLostLinkParams;
+    tSirMsgQ    mmhMsg;
+    if (NULL == pRxPacketInfo)
+    {
+        return;
+    }
+    pSmeLostLinkParams =
+    (tpSirSmeLostLinkParamsInd)vos_mem_malloc(sizeof(tSirSmeLostLinkParamsInd));
+    vos_mem_set(pSmeLostLinkParams, sizeof(tSirSmeLostLinkParamsInd), 0);
+    pSmeLostLinkParams->messageType = eWNI_SME_LOST_LINK_PARAMS_IND;
+    pSmeLostLinkParams->length = sizeof(tSirSmeLostLinkParamsInd);
+    pSmeLostLinkParams->sessionId = psessionEntry->smeSessionId;
+    pSmeLostLinkParams->info.bssIdx = psessionEntry->bssIdx;
+
+    /*
+     * Since FW adds 100 to RSSI, here also we are adding 100 so that
+     * HDD has common logic to subtract 100 from RSSI received
+     */
+    pSmeLostLinkParams->info.rssi = WDA_GET_RX_RSSI_DB(pRxPacketInfo) + 100;
+    vos_mem_copy(pSmeLostLinkParams->info.selfMacAddr,
+                 psessionEntry->selfMacAddr,
+                 sizeof(tSirMacAddr));
+    pSmeLostLinkParams->info.lastDataRate = 0;
+    pSmeLostLinkParams->info.linkFlCnt = 0;
+    pSmeLostLinkParams->info.linkFlTx = 0;
+    pSmeLostLinkParams->info.rsvd1 = 0;
+    pSmeLostLinkParams->info.rsvd2 = 0;
+
+    mmhMsg.type = eWNI_SME_LOST_LINK_PARAMS_IND;
+    mmhMsg.bodyptr = pSmeLostLinkParams;
+    mmhMsg.bodyval = 0;
+    limSysProcessMmhMsgApi(pMac, &mmhMsg, ePROT);
+}
+
+/** -----------------------------------------------------------------
+  \brief limProcessLostLinkParamsInd() - handles lost link params indication
+
+  This function process the SIR_HAL_LOST_LINK_PARAMS_IND message from HAL,
+
+  \param pMac - global mac structure
+  \return - none
+  \sa
+  ----------------------------------------------------------------- */
+
+void limProcessLostLinkParamsInd(tpAniSirGlobal pMac, tpSirMsgQ pMsg)
+{
+    tpSirSmeLostLinkParamsInd pSmeLostLinkParamsInd;
+    tpSirSmeLostLinkParamsInd pLostLInkParamsInd = (tpSirSmeLostLinkParamsInd)pMsg->bodyptr;
+    tpPESession psessionEntry ;
+    tSirMsgQ    mmhMsg;
+
+    if (NULL == pLostLInkParamsInd)
+    {
+         limLog(pMac, LOGE,
+               FL("pLostLInkParamsInd is NULL"));
+         return;
+    }
+
+    psessionEntry = peFindSessionByBssIdx(pMac,pLostLInkParamsInd->info.bssIdx);
+    if (psessionEntry == NULL)
+    {
+         limLog(pMac, LOGE,
+               FL("session does not exist for bdssIdx : %d"),
+               pLostLInkParamsInd->info.bssIdx);
+
+         return;
+    }
+    pSmeLostLinkParamsInd = vos_mem_malloc(sizeof(tSirSmeLostLinkParamsInd));
+    if (pSmeLostLinkParamsInd == NULL)
+    {
+        limLog(pMac, LOGP,
+               FL("memory allocate failed for eWNI_SME_LOST_LINK_PARAMD_IND"));
+        return;
+    }
+    pSmeLostLinkParamsInd->messageType = eWNI_SME_LOST_LINK_PARAMS_IND;
+    pSmeLostLinkParamsInd->length = sizeof(tSirSmeLostLinkParamsInd);
+    pSmeLostLinkParamsInd->sessionId = psessionEntry->smeSessionId;
+    pSmeLostLinkParamsInd->info.bssIdx = pLostLInkParamsInd->info.bssIdx;
+    pSmeLostLinkParamsInd->info.rssi = pLostLInkParamsInd->info.rssi;
+    vos_mem_copy(pSmeLostLinkParamsInd->info.selfMacAddr,
+                pLostLInkParamsInd->info.selfMacAddr,
+                sizeof(tSirMacAddr));
+    pSmeLostLinkParamsInd->info.linkFlCnt = pLostLInkParamsInd->info.linkFlCnt;
+    pSmeLostLinkParamsInd->info.linkFlTx = pLostLInkParamsInd->info.linkFlTx;
+    pSmeLostLinkParamsInd->info.lastDataRate = pLostLInkParamsInd->info.lastDataRate;
+    pSmeLostLinkParamsInd->info.rsvd1 = pLostLInkParamsInd->info.rsvd1;
+    pSmeLostLinkParamsInd->info.rsvd2 = pLostLInkParamsInd->info.rsvd2;
+
+    mmhMsg.type = eWNI_SME_LOST_LINK_PARAMS_IND;
+    mmhMsg.bodyptr = pSmeLostLinkParamsInd;
+    mmhMsg.bodyval = 0;
+    limSysProcessMmhMsgApi(pMac, &mmhMsg, ePROT);
     return;
 }
 
@@ -2103,10 +2323,8 @@ void limMicFailureInd(tpAniSirGlobal pMac, tpSirMsgQ pMsg)
          return;
     }
 
-    if (eHAL_STATUS_SUCCESS !=
-                    palAllocateMemory(pMac->hHdd,
-                                      (void **) &pSirSmeMicFailureInd,
-                                      sizeof(tSirSmeMicFailureInd)))
+    pSirSmeMicFailureInd = vos_mem_malloc(sizeof(tSirSmeMicFailureInd));
+    if (NULL == pSirSmeMicFailureInd)
     {
         // Log error
        limLog(pMac, LOGP,
@@ -2119,24 +2337,24 @@ void limMicFailureInd(tpAniSirGlobal pMac, tpSirMsgQ pMsg)
     pSirSmeMicFailureInd->sessionId = psessionEntry->smeSessionId;
 
     vos_mem_copy(pSirSmeMicFailureInd->bssId,
-        pSirMicFailureInd->bssId,
-        sizeof(tSirMacAddr));
+                 pSirMicFailureInd->bssId,
+                 sizeof(tSirMacAddr));
 
     vos_mem_copy(pSirSmeMicFailureInd->info.srcMacAddr,
-        pSirMicFailureInd->info.srcMacAddr,
-        sizeof(tSirMacAddr));
+                 pSirMicFailureInd->info.srcMacAddr,
+                 sizeof(tSirMacAddr));
 
     vos_mem_copy(pSirSmeMicFailureInd->info.taMacAddr,
-        pSirMicFailureInd->info.taMacAddr,
-        sizeof(tSirMacAddr));
+                 pSirMicFailureInd->info.taMacAddr,
+                 sizeof(tSirMacAddr));
 
     vos_mem_copy(pSirSmeMicFailureInd->info.dstMacAddr,
-        pSirMicFailureInd->info.dstMacAddr,
-        sizeof(tSirMacAddr));
+                 pSirMicFailureInd->info.dstMacAddr,
+                 sizeof(tSirMacAddr));
 
     vos_mem_copy(pSirSmeMicFailureInd->info.rxMacAddr,
-        pSirMicFailureInd->info.rxMacAddr,
-        sizeof(tSirMacAddr));
+                 pSirMicFailureInd->info.rxMacAddr,
+                 sizeof(tSirMacAddr));
 
     pSirSmeMicFailureInd->info.multicast = 
                                    pSirMicFailureInd->info.multicast;
@@ -2148,17 +2366,163 @@ void limMicFailureInd(tpAniSirGlobal pMac, tpSirMsgQ pMsg)
                                   pSirMicFailureInd->info.IV1;
 
     vos_mem_copy(pSirSmeMicFailureInd->info.TSC,
-         pSirMicFailureInd->info.TSC,SIR_CIPHER_SEQ_CTR_SIZE);
+                 pSirMicFailureInd->info.TSC,SIR_CIPHER_SEQ_CTR_SIZE);
 
     mmhMsg.type = eWNI_SME_MIC_FAILURE_IND;
     mmhMsg.bodyptr = pSirSmeMicFailureInd;
     mmhMsg.bodyval = 0;
-    MTRACE(macTraceMsgTx(pMac, sessionId, mmhMsg.type));
+    MTRACE(macTrace(pMac, TRACE_CODE_TX_SME_MSG, sessionId, mmhMsg.type));
     limSysProcessMmhMsgApi(pMac, &mmhMsg, ePROT);
     return;
 }
 
+#ifdef WLAN_FEATURE_11W
+/** --------------------------------------------------------------------
+ * lim_is_assoc_req_for_drop()- function to decides to drop assoc\reassoc
+ *  frames.
+ * @mac: pointer to global mac structure
+ * @rx_pkt_info: rx packet meta information
+ *
+ * This function is called before enqueuing the frame to PE queue to
+ * drop flooded assoc/reassoc frames getting into PE Queue.
+ *
+ * Return: true for dropping the frame otherwise false
+----------------------------------------------------------------------*/
 
+bool lim_is_assoc_req_for_drop(tpAniSirGlobal pMac, uint8_t *rx_pkt_info)
+{
+    tANI_U8 session_id;
+    tANI_U16 aid;
+    tpPESession session_entry;
+    tpSirMacMgmtHdr pMacHdr;
+    tpDphHashNode sta_ds;
+
+    pMacHdr = WDA_GET_RX_MAC_HEADER(rx_pkt_info);
+    session_entry = peFindSessionByBssid(pMac, pMacHdr->bssId, &session_id);
+    if (!session_entry)
+    {
+       PELOG1(limLog(pMac, LOG1,
+       FL("session does not exist for given STA [%pM]"),
+       pMacHdr->sa););
+       return false;
+    }
+    sta_ds = dphLookupHashEntry(pMac, pMacHdr->sa, &aid,
+                       &session_entry->dph.dphHashTable);
+    if (!sta_ds)
+    {
+       PELOG1(limLog(pMac, LOG1, FL("pStaDs is NULL")););
+       return false;
+    }
+
+    if (!sta_ds->rmfEnabled)
+       return false;
+
+    if (sta_ds->pmfSaQueryState == DPH_SA_QUERY_IN_PROGRESS)
+       return true;
+
+    if (sta_ds->last_assoc_received_time &&
+       ((vos_timer_get_system_time() -
+         sta_ds->last_assoc_received_time) < 1000))
+       return true;
+
+    sta_ds->last_assoc_received_time = vos_timer_get_system_time();
+    return false;
+}
+#endif
+
+/** ----------------------------------------------------------------------
+ *\brief limIsDeauthDiassocForDrop()..decides to drop deauth\diassoc frames.
+ *This function is called before enqueuing the frame to PE queue.
+ *This prevents deauth/diassoc frames getting into PE Queue.
+
+------------------------------------------------------------------------ */
+
+
+boolean limIsDeauthDiassocForDrop(tpAniSirGlobal pMac,
+                                          tANI_U8 *pRxPacketInfo)
+{
+    tANI_U8         sessionId;
+    tANI_U16          aid;
+    tpPESession     psessionEntry;
+    tpSirMacMgmtHdr pMacHdr;
+    tpDphHashNode     pStaDs;
+    eHalStatus lock_status = eHAL_STATUS_SUCCESS;
+    boolean ret = FALSE;
+
+    pMacHdr = WDA_GET_RX_MAC_HEADER(pRxPacketInfo);
+    psessionEntry = peFindSessionByBssid(pMac,pMacHdr->bssId,&sessionId);
+    if (!psessionEntry)
+    {
+        PELOG1(sysLog(pMac, LOG1,
+               FL("session does not exist for given STA [%pM]"),
+                  pMacHdr->sa););
+        return TRUE;
+    }
+
+    lock_status =  pe_AcquireGlobalLock(&pMac->lim);
+    if (lock_status != eHAL_STATUS_SUCCESS)
+    {
+        limLog(pMac, LOGE, FL("pe_AcquireGlobalLock error"));
+        return TRUE;
+    }
+
+    pStaDs = dphLookupHashEntry(pMac, pMacHdr->sa, &aid,
+                               &psessionEntry->dph.dphHashTable);
+    if (!pStaDs)
+    {
+        PELOG1(sysLog(pMac, LOG1,FL("pStaDs is NULL")););
+        ret = TRUE;
+        goto end;
+    }
+#ifdef WLAN_FEATURE_11W
+    if (psessionEntry->limRmfEnabled)
+    {
+        if ((WDA_GET_RX_DPU_FEEDBACK(pRxPacketInfo) &
+                               DPU_FEEDBACK_UNPROTECTED_ERROR))
+        {
+            /* It may be possible that deauth/diassoc frames from a spoofy
+             * AP is received. So if all further deauth/diassoc frmaes are
+             * dropped, then it may result in lossing deauth/diassoc frames
+             * from genuine AP. So process all deauth/diassoc frames with
+             * a time difference of 1 sec.
+             */
+            if (vos_timer_get_system_time() - pStaDs->last_unprot_deauth_disassoc < 1000)
+            {
+                ret = TRUE;
+                goto end;
+            }
+            pStaDs->last_unprot_deauth_disassoc =
+                              vos_timer_get_system_time();
+        }
+/* PMF enabed, Management frames are protected */
+        else
+        {
+            if (pStaDs->proct_deauh_disassoc_cnt)
+            {
+                ret = TRUE;
+                goto end;
+            }
+            else
+                pStaDs->proct_deauh_disassoc_cnt++;
+        }
+    }
+    else
+#endif
+/* PMF disabled */
+    {
+        if (pStaDs->isDisassocDeauthInProgress)
+        {
+            ret = TRUE;
+            goto end;
+        }
+         else
+            pStaDs->isDisassocDeauthInProgress++;
+    }
+
+end:
+    pe_ReleaseGlobalLock(&pMac->lim);
+    return ret;
+}
 /** -----------------------------------------------------------------
   \brief limIsPktCandidateForDrop() - decides whether to drop the frame or not
 
@@ -2207,6 +2571,12 @@ tMgmtFrmDropReason limIsPktCandidateForDrop(tpAniSirGlobal pMac, tANI_U8 *pRxPac
             return eMGMT_DROP_NO_DROP;
         }
 #endif
+#ifdef WLAN_FEATURE_EXTSCAN
+        else if (WDA_GET_EXTSCANFULLSCANRESIND(pRxPacketInfo))
+        {
+            return eMGMT_DROP_NO_DROP;
+        }
+#endif
         else if (WDA_IS_RX_IN_SCAN(pRxPacketInfo))
         {
             return eMGMT_DROP_SCAN_MODE_FRAME;
@@ -2228,6 +2598,12 @@ tMgmtFrmDropReason limIsPktCandidateForDrop(tpAniSirGlobal pMac, tANI_U8 *pRxPac
         return eMGMT_DROP_NO_DROP;
 #endif
 
+#ifdef WLAN_FEATURE_11W
+    if ((subType == SIR_MAC_MGMT_ASSOC_REQ ||
+         subType == SIR_MAC_MGMT_REASSOC_REQ) &&
+         lim_is_assoc_req_for_drop(pMac, pRxPacketInfo))
+        return eMGMT_DROP_SPURIOUS_FRAME;
+#endif
     //Drop INFRA Beacons and Probe Responses in IBSS Mode
     if( (subType == SIR_MAC_MGMT_BEACON) ||
         (subType == SIR_MAC_MGMT_PROBE_RSP))

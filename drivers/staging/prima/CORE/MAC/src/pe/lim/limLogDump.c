@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2013, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2013 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -18,35 +18,21 @@
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
  */
+
 /*
- * Copyright (c) 2012, The Linux Foundation. All rights reserved.
- *
- * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
- *
- *
- * Permission to use, copy, modify, and/or distribute this software for
- * any purpose with or without fee is hereby granted, provided that the
- * above copyright notice and this permission notice appear in all
- * copies.
- *
- * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
- * WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
- * WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
- * AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL
- * DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
- * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
- * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
- * PERFORMANCE OF THIS SOFTWARE.
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
  */
+
+
+
 
 /*============================================================================
 limLogDump.c
 
 Implements the dump commands specific to the lim module. 
 
-Copyright (c) 2007 QUALCOMM Incorporated.
-All Rights Reserved.
-Qualcomm Confidential and Proprietary
  ============================================================================*/
 
 #include "vos_types.h"
@@ -71,6 +57,7 @@ Qualcomm Confidential and Proprietary
 #endif
 #include "smeInside.h"
 #include "wlan_qct_wda.h"
+#include "wlan_qct_wdi_dts.h"
 
 void WDA_TimerTrafficStatsInd(tWDA_CbContext *pWDA);
 #ifdef WLANTL_DEBUG
@@ -373,9 +360,10 @@ static char *sendSmeScanReq(tpAniSirGlobal pMac, char *p)
 
     pScanReq = (tSirSmeScanReq *) &scanReq;
 
-    if (palAllocateMemory(pMac->hHdd, (void **)&pScanReq, sizeof(tSirSmeScanReq)) != eHAL_STATUS_SUCCESS)
+    pScanReq = vos_mem_malloc(sizeof(tSirSmeScanReq));
+    if (NULL == pScanReq)
     {
-        p += log_sprintf( pMac,p,"sendSmeScanReq: palAllocateMemory() failed \n");
+        p += log_sprintf( pMac,p,"sendSmeScanReq: AllocateMemory() failed \n");
         return p;
     }
 
@@ -385,7 +373,7 @@ static char *sendSmeScanReq(tpAniSirGlobal pMac, char *p)
     pScanReq->bssType = eSIR_INFRASTRUCTURE_MODE;
     limGetMyMacAddr(pMac, pScanReq->bssId);
     pScanReq->numSsid = 1;
-    palCopyMemory(pMac->hHdd, (void *) &pScanReq->ssId[0].ssId, (void *)"Ivan", 4);
+    vos_mem_copy((void *) &pScanReq->ssId[0].ssId, (void *)"Ivan", 4);
     pScanReq->ssId[0].length = 4;
     pScanReq->scanType = eSIR_ACTIVE_SCAN;
     pScanReq->returnAfterFirstMatch = 0;
@@ -436,9 +424,10 @@ static char *sendSmeDisAssocReq(tpAniSirGlobal pMac, char *p,tANI_U32 arg1 ,tANI
             return p;
     }
 
-    if (palAllocateMemory(pMac->hHdd, (void **)&pDisAssocReq, sizeof(tSirSmeDisassocReq)) != eHAL_STATUS_SUCCESS)
+    pDisAssocReq = vos_mem_malloc(sizeof(tSirSmeDisassocReq));
+    if (NULL == pDisAssocReq)
     {
-        p += log_sprintf( pMac,p,"sendSmeDisAssocReq: palAllocateMemory() failed \n");
+        p += log_sprintf( pMac,p,"sendSmeDisAssocReq: AllocateMemory() failed \n");
         return p;
     }
 
@@ -494,9 +483,10 @@ static char *sendSmeStartBssReq(tpAniSirGlobal pMac, char *p,tANI_U32 arg1)
         return p;
     }
 
-    if (palAllocateMemory(pMac->hHdd, (void **)&pStartBssReq, sizeof(tSirSmeStartBssReq)) != eHAL_STATUS_SUCCESS)
+    pStartBssReq = vos_mem_malloc(sizeof(tSirSmeStartBssReq));
+    if (NULL == pStartBssReq)
     {
-        p += log_sprintf( pMac,p,"sendSmeStartBssReq: palAllocateMemory() failed \n");
+        p += log_sprintf( pMac,p,"sendSmeStartBssReq: AllocateMemory() failed \n");
         return p;
     }
 
@@ -508,19 +498,19 @@ static char *sendSmeStartBssReq(tpAniSirGlobal pMac, char *p,tANI_U32 arg1)
         pStartBssReq->bssType = eSIR_BTAMP_STA_MODE;
 
         pStartBssReq->ssId.length = 5;
-        palCopyMemory(pMac->hHdd, (void *) &pStartBssReq->ssId.ssId, (void *)"BTSTA", 5);   
+        vos_mem_copy((void *) &pStartBssReq->ssId.ssId, (void *)"BTSTA", 5);
     }
     else if(arg1 == 1) //BTAMP AP 
     {
         pStartBssReq->bssType = eSIR_BTAMP_AP_MODE;
         pStartBssReq->ssId.length = 4;
-        palCopyMemory(pMac->hHdd, (void *) &pStartBssReq->ssId.ssId, (void *)"BTAP", 4); 
+        vos_mem_copy((void *) &pStartBssReq->ssId.ssId, (void *)"BTAP", 4);
     }
     else  //IBSS
     {
         pStartBssReq->bssType = eSIR_IBSS_MODE;
         pStartBssReq->ssId.length = 4;
-        palCopyMemory(pMac->hHdd, (void *) &pStartBssReq->ssId.ssId, (void *)"Ibss", 4);
+        vos_mem_copy((void *) &pStartBssReq->ssId.ssId, (void *)"Ibss", 4);
     }
 
     // Filling in channel ID 6
@@ -530,16 +520,16 @@ static char *sendSmeStartBssReq(tpAniSirGlobal pMac, char *p,tANI_U32 arg1)
 
     // Filling in CB mode
     cbMode = PHY_SINGLE_CHANNEL_CENTERED;
-    palCopyMemory( pMac->hHdd, pBuf, (tANI_U8 *)&cbMode, sizeof(ePhyChanBondState) );
+    vos_mem_copy(pBuf, (tANI_U8 *)&cbMode, sizeof(ePhyChanBondState));
     pBuf += sizeof(ePhyChanBondState);
 
     // Filling in RSN IE Length to zero
-    palZeroMemory( pMac->hHdd, pBuf, sizeof(tANI_U16) );    //tSirRSNie->length
+    vos_mem_set(pBuf, sizeof(tANI_U16), 0);    //tSirRSNie->length
     pBuf += sizeof(tANI_U16);
 
     // Filling in NW Type
     nwType = eSIR_11G_NW_TYPE;
-    palCopyMemory( pMac->hHdd, pBuf, (tANI_U8 *)&nwType, sizeof(tSirNwType) );
+    vos_mem_copy(pBuf, (tANI_U8 *)&nwType, sizeof(tSirNwType));
     pBuf += sizeof(tSirNwType);
 
     /* ---- To be filled by LIM later ---- 
@@ -579,9 +569,10 @@ static char *sendSmeStopBssReq(tpAniSirGlobal pMac, char *p, tANI_U32 sessionId)
     p += log_sprintf( pMac,p, "sendSmeStopBssReq: Preparing eWNI_SME_STOP_BSS_REQ message\n");
     pStopBssReq = (tSirSmeStopBssReq *) &stopBssReq;
 
-    if (palAllocateMemory(pMac->hHdd, (void **)&pStopBssReq, sizeof(tSirSmeStopBssReq)) != eHAL_STATUS_SUCCESS)
+    pStopBssReq = vos_mem_malloc(sizeof(tSirSmeStopBssReq));
+    if (NULL == pStopBssReq)
     {
-        p += log_sprintf( pMac,p,"sendSmeStopBssReq: palAllocateMemory() failed \n");
+        p += log_sprintf( pMac,p,"sendSmeStopBssReq: AllocateMemory() failed \n");
         return p;
     }
 
@@ -591,7 +582,7 @@ static char *sendSmeStopBssReq(tpAniSirGlobal pMac, char *p, tANI_U32 sessionId)
     pStopBssReq->reasonCode = eSIR_SME_SUCCESS;
     msgLen += sizeof(tSirResultCodes);
 
-    palCopyMemory(pMac->hHdd, (void *) &pStopBssReq->bssId, (void *)psessionEntry->bssId, 6);  
+    vos_mem_copy((void *) &pStopBssReq->bssId, (void *)psessionEntry->bssId, 6);
     msgLen += sizeof(tSirMacAddr);
 
     pStopBssReq->sessionId = (tANI_U8)sessionId;
@@ -652,14 +643,15 @@ static char *sendSmeJoinReq(tpAniSirGlobal pMac, char *p)
         0x50, 0x10, 0x08, 0x00, 0x02, 0x01, 0x8E
     };
 
-     if (palAllocateMemory(pMac->hHdd, (void **)&pJoinReq, msgLen) != eHAL_STATUS_SUCCESS)
+    pJoinReq = vos_mem_malloc(msgLen);
+    if (NULL == pJoinReq)
     {
-        p += log_sprintf( pMac,p,"sendSmeJoinReq: palAllocateMemory() failed \n");
+        p += log_sprintf( pMac,p,"sendSmeJoinReq: AllocateMemory() failed \n");
         return p;
     }
 
     pBuf = (unsigned char *)pJoinReq;
-    palCopyMemory( pMac->hHdd, pBuf, (tANI_U8 *)msgDump, msgLen );
+    vos_mem_copy(pBuf, (tANI_U8 *)msgDump, msgLen);
 
     msg.type = eWNI_SME_JOIN_REQ;
     msg.bodyptr = pJoinReq;
@@ -1125,7 +1117,7 @@ dump_lim_del_sta( tpAniSirGlobal pMac, tANI_U32 arg1, tANI_U32 arg2, tANI_U32 ar
     pStaDs->mlmStaContext.disassocReason = (tSirMacReasonCodes) reasonCode;
 
     // Issue Disassoc Indication to SME.
-    palCopyMemory( pMac->hHdd, (tANI_U8 *) &mlmDisassocInd.peerMacAddr,
+    vos_mem_copy((tANI_U8 *) &mlmDisassocInd.peerMacAddr,
                                 (tANI_U8 *) pStaDs->staAddr, sizeof(tSirMacAddr));
     mlmDisassocInd.reasonCode = reasonCode;
     mlmDisassocInd.disassocTrigger = eLIM_PEER_ENTITY_DISASSOC;
@@ -1215,7 +1207,7 @@ dump_lim_send_SM_Power_Mode( tpAniSirGlobal pMac, tANI_U32 arg1, tANI_U32 arg2, 
 
         state = (tSirMacHTMIMOPowerSaveState) arg1;
 
-    palAllocateMemory(pMac->hHdd, (void **)&pMBMsg, WNI_CFG_MB_HDR_LEN + sizeof(tSirMacHTMIMOPowerSaveState));
+    pMBMsg = vos_mem_malloc(WNI_CFG_MB_HDR_LEN + sizeof(tSirMacHTMIMOPowerSaveState));
     if(NULL == pMBMsg)
     {
         p += log_sprintf( pMac,p, "pMBMsg is NULL\n");
@@ -1223,7 +1215,7 @@ dump_lim_send_SM_Power_Mode( tpAniSirGlobal pMac, tANI_U32 arg1, tANI_U32 arg2, 
     }
     pMBMsg->type = eWNI_PMC_SMPS_STATE_IND;
     pMBMsg->msgLen = (tANI_U16)(WNI_CFG_MB_HDR_LEN + sizeof(tSirMacHTMIMOPowerSaveState));
-    palCopyMemory(pMac->hHdd, pMBMsg->data, &state, sizeof(tSirMacHTMIMOPowerSaveState));
+    vos_mem_copy(pMBMsg->data, &state, sizeof(tSirMacHTMIMOPowerSaveState));
 
     msg.type = eWNI_PMC_SMPS_STATE_IND;
     msg.bodyptr = pMBMsg;
@@ -1232,7 +1224,7 @@ dump_lim_send_SM_Power_Mode( tpAniSirGlobal pMac, tANI_U32 arg1, tANI_U32 arg2, 
     if (limPostMsgApi(pMac, &msg) != TX_SUCCESS)
     {
             p += log_sprintf( pMac,p, "Updating the SMPower Request has failed \n");
-        palFreeMemory(pMac->hHdd, pMBMsg);
+        vos_mem_free(pMBMsg);
     }
     else
     {
@@ -1501,7 +1493,6 @@ static char* dump_lim_start_stop_bg_scan(tpAniSirGlobal pMac, tANI_U32 arg1, tAN
 static char* 
 dump_lim_get_pe_statistics(tpAniSirGlobal pMac, tANI_U32 arg1, tANI_U32 arg2, tANI_U32 arg3, tANI_U32 arg4, char *p)
 {
-    eHalStatus status = eHAL_STATUS_SUCCESS;
     tpAniGetPEStatsReq pReq;
     tANI_U32 statsMask;
 
@@ -1525,18 +1516,20 @@ dump_lim_get_pe_statistics(tpAniSirGlobal pMac, tANI_U32 arg1, tANI_U32 arg2, tA
         case 5:
             statsMask = PE_PER_STA_STATS_INFO;
             break;
+        case 6:
+            statsMask = PE_PER_TX_PKT_STATS_INFO;
         default:
             return p;
     }
     
-
-    if( eHAL_STATUS_SUCCESS != (status = palAllocateMemory (pMac->hHdd, (void**) &pReq, sizeof(tAniGetPEStatsReq))))
+    pReq = vos_mem_malloc(sizeof(tAniGetPEStatsReq));
+    if (NULL == pReq)
     {
         p += log_sprintf( pMac,p, "Error: Unable to allocate memory.\n");
         return p;
     }
 
-    palZeroMemory( pMac, pReq, sizeof(*pReq));
+    vos_mem_set(pReq, sizeof(*pReq), 0);
     
     pReq->msgType = eWNI_SME_GET_STATISTICS_REQ;
     pReq->statsMask = statsMask;
@@ -1835,7 +1828,7 @@ dump_lim_send_rrm_action( tpAniSirGlobal pMac, tANI_U32 arg1, tANI_U32 arg2, tAN
                    neighbor.dialogToken = 2;
                    neighbor.ssid_present = (tANI_U8) arg4;
                    neighbor.ssid.length = 5;
-                   palCopyMemory( pMac->hHdd, neighbor.ssid.ssId, "abcde", 5);
+                   vos_mem_copy(neighbor.ssid.ssId, "abcde", 5);
 
                    limSendNeighborReportRequestFrame( pMac, &neighbor, psessionEntry->bssId, psessionEntry );
 
@@ -2106,9 +2099,9 @@ dump_lim_ft_event( tpAniSirGlobal pMac, tANI_U32 arg1, tANI_U32 arg2, tANI_U32 a
                    auth_req_len = sizeof(tSirFTPreAuthReq);
 
                    pftPreAuthReq = vos_mem_malloc(auth_req_len);
-                   if (pftPreAuthReq == NULL)
+                   if (NULL == pftPreAuthReq)
                    {
-                       p += log_sprintf( pMac,p,"Pre auth dump: palAllocateMemory() failed \n");
+                       p += log_sprintf( pMac,p,"Pre auth dump: AllocateMemory() failed \n");
                        return p;
                    }
                    pftPreAuthReq->pbssDescription = vos_mem_malloc(sizeof(Profile.pBssDesc->length)+
@@ -2119,14 +2112,14 @@ dump_lim_ft_event( tpAniSirGlobal pMac, tANI_U32 arg1, tANI_U32 arg2, tANI_U32 a
                        Profile.pBssDesc->length;
                    pftPreAuthReq->preAuthchannelNum = 6; 
 
-                   palCopyMemory(pMac->hHdd, (void *) &pftPreAuthReq->currbssId, 
+                   vos_mem_copy((void *) &pftPreAuthReq->currbssId,
                        (void *)psessionEntry->bssId, 6);  
-                   palCopyMemory(pMac->hHdd, (void *) &pftPreAuthReq->preAuthbssId, 
+                   vos_mem_copy((void *) &pftPreAuthReq->preAuthbssId,
                        (void *)macAddr, 6);  
                    pftPreAuthReq->ft_ies_length = (tANI_U16)pMac->ft.ftSmeContext.auth_ft_ies_length;
 
                    // Also setup the mac address in sme context.
-                   palCopyMemory(pMac->hHdd, pMac->ft.ftSmeContext.preAuthbssId, macAddr, 6);
+                   vos_mem_copy(pMac->ft.ftSmeContext.preAuthbssId, macAddr, 6);
 
                    vos_mem_copy(pftPreAuthReq->ft_ies, pMac->ft.ftSmeContext.auth_ft_ies, 
                        pMac->ft.ftSmeContext.auth_ft_ies_length);
@@ -2326,9 +2319,9 @@ dump_lim_mcc_policy_maker(tpAniSirGlobal pMac, tANI_U32 arg1,tANI_U32 arg2,tANI_
       v_VOID_t * pVosContext = vos_get_global_context(VOS_MODULE_ID_WDA, NULL);
       tWDA_CbContext *pWDA =  vos_get_context(VOS_MODULE_ID_WDA, pVosContext);
       ccmCfgSetInt(pMac, WNI_CFG_ENABLE_MCC_ADAPTIVE_SCHED, TRUE, NULL, eANI_BOOLEAN_FALSE);
-      if(NULL != pWDA)
+      if(pWDA != NULL)
       {
-         WDA_TimerTrafficStatsInd(pWDA);
+          WDA_TimerTrafficStatsInd(pWDA);
       }
       WDA_TrafficStatsTimerActivate(FALSE);
       ccmCfgSetInt(pMac, WNI_CFG_ENABLE_MCC_ADAPTIVE_SCHED, FALSE,NULL, eANI_BOOLEAN_FALSE);
@@ -2337,7 +2330,7 @@ dump_lim_mcc_policy_maker(tpAniSirGlobal pMac, tANI_U32 arg1,tANI_U32 arg2,tANI_
    {
       v_VOID_t * pVosContext = vos_get_global_context(VOS_MODULE_ID_WDA, NULL);
       tWDA_CbContext *pWDA =  vos_get_context(VOS_MODULE_ID_WDA, pVosContext);
-      if (tx_timer_change(&pWDA->wdaTimers.trafficStatsTimer, arg2/10, arg2/10) != TX_SUCCESS)
+      if (pWDA != NULL && tx_timer_change(&pWDA->wdaTimers.trafficStatsTimer, arg2/10, arg2/10) != TX_SUCCESS)
       {
           limLog(pMac, LOGP, FL("Disable timer before changing timeout value"));
       }
@@ -2374,6 +2367,32 @@ dump_lim_get_pkts_rcvd_per_rssi_values( tpAniSirGlobal pMac, tANI_U32 arg1, tANI
     return p;
 }
 #endif
+
+
+static char *
+dump_set_max_probe_req(tpAniSirGlobal pMac, tANI_U32 arg1, tANI_U32 arg2,
+             tANI_U32 arg3, tANI_U32 arg4, char *p)
+{
+    if ((arg1 <= 0) || (arg1 > 4)){
+       limLog(pMac, LOGE,
+           FL("invalid number. valid range 1 - 4 \n"));
+       return p;
+    }
+    pMac->lim.maxProbe = arg1;
+    return p;
+}
+/* API to fill Rate Info based on mac efficiency
+ * arg 1: mac efficiency to be used to calculate mac thorughput for a given rate index
+ * arg 2: starting rateIndex to apply the macEfficiency to
+ * arg 3: ending rateIndex to apply the macEfficiency to
+ */
+static char *
+dump_limRateInfoBasedOnMacEff(tpAniSirGlobal pMac, tANI_U32 arg1, tANI_U32 arg2, tANI_U32 arg3, tANI_U32 arg4, char *p)
+{
+    limLog(pMac, LOGE, FL("arg1 %u, arg2 %u, arg3 %u"), arg1, arg2, arg3);
+    WDTS_FillRateInfo((tANI_U8)(arg1), (tANI_U16)(arg2), (tANI_U16)(arg3));
+    return p;
+}
 
 static tDumpFuncEntry limMenuDumpTable[] = {
     {0,     "PE (300-499)",                                          NULL},
@@ -2448,6 +2467,8 @@ static tDumpFuncEntry limMenuDumpTable[] = {
     {369,   "PE.LIM: pkts/rateIdx: iwpriv wlan0 dump 368 <staId> <boolean to flush counter>",    dump_lim_get_pkts_rcvd_per_rate_idx},
     {370,   "PE.LIM: pkts/rssi: : iwpriv wlan0 dump 369 <staId> <boolean to flush counter>",    dump_lim_get_pkts_rcvd_per_rssi_values},
 #endif
+    {374,   "PE.LIM: MAS RX stats MAC eff <MAC eff in percentage>",  dump_limRateInfoBasedOnMacEff},
+    {376,   "PE.LIM: max number of probe per scan", dump_set_max_probe_req },
 };
 
 

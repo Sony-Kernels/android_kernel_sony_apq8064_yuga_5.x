@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2013, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2015 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -18,25 +18,11 @@
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
  */
+
 /*
- * Copyright (c) 2012, The Linux Foundation. All rights reserved.
- *
- * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
- *
- *
- * Permission to use, copy, modify, and/or distribute this software for
- * any purpose with or without fee is hereby granted, provided that the
- * above copyright notice and this permission notice appear in all
- * copies.
- *
- * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
- * WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
- * WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
- * AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL
- * DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
- * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
- * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
- * PERFORMANCE OF THIS SOFTWARE.
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
  */
 
 /******************************************************************************
@@ -75,9 +61,17 @@
 #define ANI_DRIVER_MSG_START         0x0001
 #define ANI_MSG_APP_REG_REQ         (ANI_DRIVER_MSG_START + 0)
 #define ANI_MSG_APP_REG_RSP         (ANI_DRIVER_MSG_START + 1)
+#define ANI_MSG_OEM_DATA_REQ        (ANI_DRIVER_MSG_START + 2)
+#define ANI_MSG_OEM_DATA_RSP        (ANI_DRIVER_MSG_START + 3)
+#define ANI_MSG_CHANNEL_INFO_REQ    (ANI_DRIVER_MSG_START + 4)
+#define ANI_MSG_CHANNEL_INFO_RSP    (ANI_DRIVER_MSG_START + 5)
+#define ANI_MSG_OEM_ERROR           (ANI_DRIVER_MSG_START + 6)
+
 #define ANI_MAX_RADIOS      3
 #define ANI_NL_MSG_OK       0
 #define ANI_NL_MSG_ERROR    -1
+#define INVALID_PID         -1
+
 #define ANI_NL_MSG_OVERHEAD (NLMSG_SPACE(tAniHdr + 4))
 /*
  * Packet Format for READ_REGISTER & WRITE_REGISTER:
@@ -101,7 +95,7 @@
  * Payload     : LEN_PAYLOAD bytes
 */
 int ptt_sock_activate_svc(void *pAdapter);
-int ptt_sock_send_msg_to_app(tAniHdr *wmsg, int radio, int src_mod, int pid);
+int ptt_sock_send_msg_to_app(tAniHdr *wmsg, int radio, int src_mod, int pid, int flag);
 
 /*
  * Format of message exchanged between the PTT Socket App in userspace and the
@@ -113,6 +107,12 @@ typedef struct sAniNlMsg {
     int radio;                        // unit number of the radio
     tAniHdr wmsg;                     // Airgo Message Header
 } tAniNlHdr;
+typedef struct sAniNlMgmtLogMsg {
+    struct  nlmsghdr nlh;
+    int radio;
+    tAniHdr wmsg;
+    uint32 frameSize;
+} tAniNlLogHdr;
 typedef struct sAniAppRegReq {
     tAniNlModTypes type;              // module id
     int pid;                          // process id
